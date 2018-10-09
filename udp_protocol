@@ -5,4 +5,6 @@ type | regist; username | "name"; password | "pw"              type | status; re
 type | login; username | "name"; password | "pw"               type | status; logged | (on/off);  msg | Welcome to DropMusic/Try Again
 
 2.
-type | manage;                                                    
+type | manage;
+
+olá diogo
