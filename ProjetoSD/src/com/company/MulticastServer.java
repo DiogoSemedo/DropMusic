@@ -12,6 +12,7 @@ public class MulticastServer extends Thread {
     public static void main(String[] args) {
         MulticastServer server = new MulticastServer();
         server.start();
+        new MulticastClient().start();
     }
 
     public MulticastServer() {
@@ -24,6 +25,7 @@ public class MulticastServer extends Thread {
         System.out.println(this.getName() + " running...");
         try {
             socket = new MulticastSocket();  // create socket without binding it (only for sending)
+            new Read(socket.getLocalPort());
             while (true) {
                 String message = this.getName() + " packet " + counter++;
                 byte[] buffer = message.getBytes();
@@ -38,6 +40,40 @@ public class MulticastServer extends Thread {
             e.printStackTrace();
         } finally {
             socket.close();
+        }
+    }
+    class Read extends Thread {
+        MulticastSocket socket;
+        int port;
+        public Read(int port) {
+            try{
+                this.port = port;
+                this.socket = new MulticastSocket(PORT);
+                this.start();
+            }catch(IOException e){ System.out.println("Exception");}
+        }
+
+        public void run(){
+            try {
+                InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
+                socket.joinGroup(group);
+                while (true) {
+                    byte[] buffer = new byte[256];
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                    socket.receive(packet);
+                    if(port != packet.getPort()) {
+                        System.out.println("Received packet from " + packet.getAddress().getHostAddress() + ":" + packet.getPort() + " with message:");
+                        String message = new String(packet.getData(), 0, packet.getLength());
+                        System.out.println(message);
+                    }
+                }
+            }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+            finally {
+                socket.close();
+            }
         }
     }
 }
