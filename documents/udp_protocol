@@ -1,10 +1,13 @@
 Request: client -> server                                      Answer: server -> client
 1.
-type | regist; username | "name"; password | "pw"              type | status; regist | done/wrong; msg | Registry done! Enjoy DropMusic/Username already in use
+type | regist; username | "name"; password | "pw"              type | status; regist | done/wrong; msg | Registry Sucessfull! Enjoy DropMusic / Error!!!
 
-type | login; username | "name"; password | "pw"               type | status; logged | (on/off);  msg | Welcome to DropMusic/Try Again
+type | login; username | "name"; password | "pw"               type | status; logged | (on/off);  msg | Welcome to DropMusic / Try Again!
 
 2.
-type | manage;
+type | manage; entity | "artist/music/album" ; function | "insert/edit/remove"
 
-olá diogo
+3.
+type | upgrade; username | "name"                              type | notification; msg | "You have been granted editor permissions"
+
+type | review; album |"name"; score | int(pontuacao); reviewText | "texto300palavras max"

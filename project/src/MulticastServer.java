@@ -6,7 +6,7 @@ import java.io.IOException;
 public class MulticastServer extends Thread {
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private int PORT = 4321;
-
+    private Database db = new Database();
     public static void main(String[] args) {
         MulticastServer server = new MulticastServer();
         server.start();
@@ -36,10 +36,12 @@ public class MulticastServer extends Thread {
                     System.out.println("Recebi: " + packet.getAddress().getHostAddress() + ":" + packet.getPort());
                     String message = new String(packet.getData(), 0, packet.getLength());
                     System.out.println(message);
+                    String m = db.process("type|regist;username|Maria;password|123");
+                    System.out.println(m);
                     //suposto tratamento de request e envio da reply
                     //criar thread para enviar reply ou trata-se logo aqui com uma socket send?
                     //esta solução é mais simples que thread
-                    byte[] replyBuffer = messageReply.getBytes();
+                    byte[] replyBuffer = m.getBytes();
                     DatagramPacket packet2 = new DatagramPacket(replyBuffer, replyBuffer.length, group, PORT);
                     //testar funcao packet.setAddress
                     reply.send(packet2);

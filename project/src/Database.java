@@ -1,12 +1,13 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.util.*;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Database {
-    public class User{
+    public class User {
         private String username;
         private String password;
         private boolean permissao; //false-normal true-editor
@@ -17,63 +18,93 @@ public class Database {
             this.permissao = permissao;
         }
     }
-    private HashMap<String,String> commands = new HashMap<String,String>();
-    public void initCommands(){
-        commands.put("type","regist");
-        commands.put("type","login");
-    }
-    private ArrayList <user> users = new ArrayList<>();
-    public String process(String message){
-        String [] sm = message.split(";");
-        String [] type = sm[0].split("|");
-        String reply ="";
-        if(commands.containsValue(type[1])) {
-            switch (type[1]) {
-                case "regist":
-                    reply=regist(sm);
-                    break;
-                case "login":
-                    break;
-                default:
-                    break;
-            }
-        }
-        return reply;
-    }
-    public String regist(String [] message){
-        try{
-            if(message.size()==2){//exemplo --> type|regist;username|__name__;password|__pass__;
-                String [] username = message[1].split("|");
-                String [] password = message[2].split("|");
-            }
-            else{
-              return "Wrong format of request";
-            }
-        }catch(Exception e){
-            return "Wrong format of request";
-        }
-        //verificar a validade do request
-        if(username[0].equals("username") && password[0].equals("password")){
-            User u = new User(username[1],password[1],false);
-            //verificamos se o username nao existe
-            if(!users.contains(u)){
-                re
-            }
-        }
-        return "";
-    }
-}
-    /*
-    public static void main(String[] args){
-        try{
+
+    private Connection c;
+    private PreparedStatement st;
+    private ResultSet rs;
+
+    public Database() {
+        try {
             Class.forName("org.postgresql.Driver");
-            Connection c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database","postgres","zubiru");
-            PreparedStatement st = c.prepareStatement("select *from public.users");
-            ResultSet rs = st.executeQuery();
-            while(rs.next()){
-                System.out.println(rs.getInt(1)+" "+rs.getString(2));
-            }
-        }catch(Exception e){
+            this.c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database", "postgres", "zubiru");
+        } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-    }*/
+
+    }
+
+    private ArrayList<User> users = new ArrayList<>();
+
+    public String process(String message) {
+        String[] sm = message.split(";");
+        String[] type = sm[0].split("\\|");
+        String reply = "";
+
+        switch (type[1]) {
+            case "regist":
+                reply = regist(sm);
+                break;
+            case "login":
+                break;
+            default:
+                break;
+        }
+
+        return reply;
+    }
+
+    public String regist(String[] message) {
+        if (message.length == 3) {
+            //exemplo --> type|regist;username|name;password|pass;
+            String[] username = message[1].split("\\|");
+            String[] password = message[2].split("\\|");
+            //verificar a validade do request
+            if (username[0].equals("username") && password[0].equals("password")) {
+                try {
+                    st = c.prepareStatement("select name from public.users where name = '" + username[1] + "'");
+                    rs = st.executeQuery();
+                    if (rs.next()) {
+                        return "type | status; regist | wrong; msg | Error!!!";
+                    }
+                    st = c.prepareStatement("select count(name) from public.users");
+                    rs = st.executeQuery();
+                    st = c.prepareStatement("INSERT INTO public.users(name, password, permission) VALUES (?, ?, ?);");
+                    st.setString(1, username[1]);
+                    st.setString(2, password[1]);
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        st.setBoolean(3, true);
+                    } else {
+                        st.setBoolean(3, false);
+                    }
+                    st.executeUpdate();
+                    return "type | status; regist | done; msg | Registry Sucessfull! Enjoy DropMusic";
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+        return "Wrong format of request";
+    }
+
+    public String login(String[] message) {
+        if (message.length == 2) {
+            //exemplo --> type|regist;username|name;password|pass;
+            String[] username = message[1].split("|");
+            String[] password = message[2].split("|");
+            //verificar a validade do request
+            if (username[0].equals("username") && password[0].equals("password")) {
+                User u = new User(username[1], password[1], false);
+                if (users.contains(u)) {
+                    //login
+                    return "type | status; login | on; msg | Welcome to DropMusic";
+                } else {
+                    return "type | status; login | wrong; msg | Error!!!";
+                }
+            } else {
+                return "Wrong format of request";
+            }
+        } else {
+            return "Wrong format of request";
+        }
+    }
+}
