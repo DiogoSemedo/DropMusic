@@ -116,7 +116,6 @@ public class Database {
     public HashMap<String,String> showall(HashMap<String,String> message){
         //exemplo --> type|show all;select|(artists,albums,musics)
         HashMap<String,String> reply = new HashMap<String,String>();
-        String m;
         try{
             st = c.prepareStatement("select id,title from public."+message.get("select")+";");
             rs = st.executeQuery();
@@ -131,4 +130,47 @@ public class Database {
         }
     }
 
+    public HashMap<String, String> showdetails(HashMap<String, String> message) {
+        //exemplo --> type|show details;select|(artists,albums);identifier|(1,5,19)
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            if (message.get("select").equals("artists")) {
+                st = c.prepareStatement("select * from public.artists where id=" + message.get("identifier") + ";");
+                rs = st.executeQuery();
+                if (rs.next()) {
+                    reply.put("details", String.valueOf(rs.getInt(1)) + " Name:" + rs.getString(2) + " Description:" + rs.getString(3));
+                    return reply;
+                }
+                reply.put("type", "show details");
+                reply.put("identifier", "Don't exists.");
+                return reply;
+            } else {
+                st = c.prepareStatement("select * from public.albums where id=" + message.get("identifier" + ";"));
+                rs = st.executeQuery();
+                if (rs.next()) {
+                    reply.put("details", String.valueOf(rs.getInt(1)) + " Title:" + rs.getString(2) + " Description:" + rs.getString(3) + " Rate:" + String.valueOf(rs.getDouble(4)));
+                    st = c.prepareStatement("select id,title,compositor,duration,genre from public.musics where idalbum=" + message.get("identifier") + ";");
+                    rs = st.executeQuery();
+                    while (rs.next()) {
+                        reply.put("Music:" + String.valueOf(rs.getInt(1)), "Title:" + rs.getString(2) + " Compositor:" + rs.getString(3) + " Duration:" + rs.getString(4) + " Genre:" + rs.getString(5));
+                    }
+                    st = c.prepareStatement("select id,text from public.reviews where idalbum=" + message.get("identifier") + ";");
+                    rs = st.executeQuery();
+                    while (rs.next()) {
+                        reply.put("Review:" + String.valueOf(rs.getInt(1)), rs.getString(2));
+                    }
+                    return reply;
+                } else {
+                    reply.put("type", "show details");
+                    reply.put("identifier", "Don't exists.");
+                    return reply;
+                }
+            }
+        } catch (Exception e) {
+            reply.put("type", "show details");
+            reply.put("msg", e.getMessage());
+            return reply;
+        }
+    }
+    
 }
