@@ -1,9 +1,11 @@
+import java.io.*;
 import java.net.MulticastSocket;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.io.IOException;
+import java.util.HashMap;
 
 public class MulticastServer extends Thread {
+    private int BUFFER_SIZE = 2048;
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private int PORT = 4321;
     private Database db = new Database();
@@ -17,40 +19,65 @@ public class MulticastServer extends Thread {
     }
 
     public void run() {
-        MulticastSocket listen = null;
+        MulticastSocket socket = null;
         MulticastSocket reply = null;
         long counter = 0;
         String messageReply = "teste";
         System.out.println(this.getName() + " running...");
         try {
-            listen = new MulticastSocket(PORT);  // create socket without binding it (only for receving)
+            socket = new MulticastSocket(PORT);  // create socket without binding it (only for receving)
             reply = new MulticastSocket();
             InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
-            listen.joinGroup(group);
-            reply.joinGroup(group);
+            socket.joinGroup(group);
+            ByteArrayInputStream byteIn;
+            ObjectInputStream in;
+            HashMap<String,String> message;
+            HashMap<String,String> replyM;
+
             while (true) {
-                byte[] buffer = new byte[256];
+                ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+                ObjectOutputStream out = new ObjectOutputStream(byteOut);
+                byte[] buffer = new byte[BUFFER_SIZE];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                listen.receive(packet);//espera até receber
-                if(reply.getLocalPort() != packet.getPort()) {
+                socket.receive(packet);//espera até receber
+                if(socket.getLocalPort() != packet.getPort()) {
                     System.out.println("Recebi: " + packet.getAddress().getHostAddress() + ":" + packet.getPort());
-                    String message = new String(packet.getData(), 0, packet.getLength());
-                    System.out.println(message);
-                    String m = db.process("type|regist;username|Maria;password|123");
-                    System.out.println(m);
-                    //suposto tratamento de request e envio da reply
-                    //criar thread para enviar reply ou trata-se logo aqui com uma socket send?
-                    //esta solução é mais simples que thread
-                    byte[] replyBuffer = m.getBytes();
-                    DatagramPacket packet2 = new DatagramPacket(replyBuffer, replyBuffer.length, group, PORT);
+
+                    byteIn = new ByteArrayInputStream(packet.getData());
+                    in = new ObjectInputStream(byteIn);
+                    message = (HashMap<String,String>) in.readObject();
+                    System.out.println("\no que recebi");
+                    for (HashMap.Entry<String, String> entry : message.entrySet()) {
+                        System.out.println(entry.getKey() + " : " + entry.getValue());
+                    }
+                    System.out.println("fim do que recebi");
+                    replyM = db.process(message);
+                    System.out.println("\no que vou enviar");
+                    for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
+                        System.out.println(entry.getKey() + " : " + entry.getValue());
+                    }
+                    System.out.println("fim do que vou enviar");
+                    message.clear();
+
+                    out.writeObject(replyM);
+                    byte[] replyBuffer = byteOut.toByteArray();
+                    DatagramPacket packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, group, PORT);
                     //testar funcao packet.setAddress
-                    reply.send(packet2);
+                    //socket.setTimeToLive(100);
+                    socket.send(packetReply);
+                    replyM.clear();
+                    byteOut.close();
+                    out.close();
+
                 }
             }
         }catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            listen.close();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }finally
+         {
+            socket.close();
         }
     }
     /*
