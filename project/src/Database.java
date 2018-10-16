@@ -157,7 +157,7 @@ public class Database {
                     st = c.prepareStatement("select id,text from public.reviews where idalbum=" + message.get("identifier") + ";");
                     rs = st.executeQuery();
                     while (rs.next()) {
-                        reply.put("Review:" + String.valueOf(rs.getInt(1)), rs.getString(2));
+                        reply.put("Review:" + String.valueOf(rs.getInt(1)),"Rate:"+String.valueOf(rs.getDouble(3))+" Text:"+rs.getString(2));
                     }
                     return reply;
                 } else {
@@ -172,5 +172,25 @@ public class Database {
             return reply;
         }
     }
-    
+
+    public HashMap<String, String> writereview(HashMap<String, String> message) {
+        //exemplo --> type|write review;identifier|idalbum;rate|4.5;text|asdkjasdkasjkd
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            st = c.prepareStatement("insert into public.reviews (id,text,idalbum,rate) values (default,?,?,?)");
+            st.setString(1, message.get("text"));
+            st.setInt(2, Integer.parseInt(message.get("identifier")));
+            st.setDouble(3, Double.parseDouble(message.get("rate")));
+            rs = st.executeQuery();
+            st = c.prepareStatement("update public.albums set rate=(select avg(public.reviews.rate) from public.albums,public.reviews where public.reviews.idalbum=" + message.get("identifier") + "and public.albums.id=" + message.get("identifier") + ");");
+            rs = st.executeQuery();
+            reply.put("type", "write review");
+            reply.put("msg", "sucessful");
+            return reply;
+        } catch (Exception e) {
+            reply.put("type", "write review");
+            reply.put("msg", e.getMessage());
+            return reply;
+        }
+    }
 }
