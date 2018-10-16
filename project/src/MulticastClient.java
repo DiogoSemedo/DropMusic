@@ -76,6 +76,20 @@ class MulticastUser extends Thread {
         super("User " + (long) (Math.random() * 1000));
     }
 
+    public String selectId(){
+        Scanner keyboardScanner = new Scanner(System.in);
+        String read = keyboardScanner.nextLine();
+        while(true) {
+            try {
+                System.out.println("Select ID");
+                return String.valueOf(Integer.parseInt(read));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
     public String select(){
 
         Scanner keyboardScanner = new Scanner(System.in);
@@ -95,6 +109,42 @@ class MulticastUser extends Thread {
             }
         }
     }
+
+    public HashMap<String,String> insert(HashMap<String,String> message){
+        Scanner keyboardScanner = new Scanner(System.in);
+        message.put("type","insert");
+        String select = select();
+        message.put("select",select);
+        //sem defesa de inputs
+        switch (select){
+            case "artists":
+                System.out.println("Title:");
+                message.put("title",keyboardScanner.nextLine());
+                System.out.println("Description:");
+                message.put("description",keyboardScanner.nextLine());
+                break;
+            case "albums":
+                System.out.println("Title:");
+                message.put("title",keyboardScanner.nextLine());
+                System.out.println("Description:");
+                message.put("description",keyboardScanner.nextLine());
+                System.out.println("Rate:");
+                message.put("rate",String.valueOf(keyboardScanner.nextDouble()));
+                break;
+            case "musics":
+                System.out.println("Title:");
+                message.put("title",keyboardScanner.nextLine());
+                System.out.println("Compositor:");
+                message.put("compositor",keyboardScanner.nextLine());
+                System.out.println("Duration:");
+                message.put("duration",keyboardScanner.nextLine());
+                System.out.println("Genre:");
+                message.put("genre",keyboardScanner.nextLine());
+                break;
+        }
+        return message;
+
+    }
     public void run() {
         MulticastSocket socket = null;
         System.out.println(this.getName() + " ready...");
@@ -107,7 +157,7 @@ class MulticastUser extends Thread {
             while (true) {
                 System.out.println("Select option: (help to get help) ");
                 String readKeyboard = keyboardScanner.nextLine();
-                /*switch (readKeyboard){
+                switch (readKeyboard){
                     case "help":
                         System.out.println("         search music");
                         System.out.println("           show all");
@@ -124,26 +174,32 @@ class MulticastUser extends Thread {
                         break;
                     case "show all":
                         message.put("type","show all");
-
+                        message.put("select",select());
+                        //done
                         break;
-                    case "more details":
+                    case "show details":
                         message.put("type","more details");
-
+                        message.put("select",select());
+                        message.put("id",selectId());
+                        //done
                         break;
                     case "insert":
-                        message.put("type","insert");
+                        message = insert(message);
+                        //done
 
                         break;
                     case "remove":
                         message.put("type","remove");
-
+                        message.put("select", selectId());
+                        message.put("id",selectId());
+                        //done
                         break;
                     default:
                         System.out.println("Wrong comand");
                         break;
-                }*/
-                message.put("type","show all");
-                message.put("select","artists");
+                }
+                //message.put("type","show all");
+                //message.put("select","artists");
                 //message.put("password","kak2123l");
                 out.writeObject(message);
                 InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
