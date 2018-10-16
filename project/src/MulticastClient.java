@@ -54,6 +54,7 @@ public class MulticastClient extends Thread {
                 //System.out.println("Received packet from " + packet.getAddress().getHostAddress() + ":" + packet.getPort() + " with message:");
                 //System.out.println(map.get("id"));
                 //System.out.println(map.values());
+                System.out.println("----------message---------------");
                 for (HashMap.Entry<String, String> entry : map.entrySet()) {
                     System.out.println(entry.getKey() + " : " + entry.getValue());
                 }
@@ -157,7 +158,7 @@ class MulticastUser extends Thread {
             while (true) {
                 System.out.println("Select option: (help to get help) ");
                 String readKeyboard = keyboardScanner.nextLine();
-                switch (readKeyboard){
+                /*switch (readKeyboard){
                     case "help":
                         System.out.println("         search music");
                         System.out.println("           show all");
@@ -191,16 +192,17 @@ class MulticastUser extends Thread {
                     case "remove":
                         message.put("type","remove");
                         message.put("select", selectId());
-                        message.put("id",selectId());
+                        message.put("identifier",selectId());
                         //done
                         break;
                     default:
                         System.out.println("Wrong comand");
                         break;
-                }
-                //message.put("type","show all");
-                //message.put("select","artists");
-                //message.put("password","kak2123l");
+                        //nota write review
+                }*/
+                message.put("type","show details");
+                message.put("select","albums");
+                message.put("identifier","1");
                 out.writeObject(message);
                 InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
                 byte[] buffer = byteOut.toByteArray();

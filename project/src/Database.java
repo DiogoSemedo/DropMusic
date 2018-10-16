@@ -47,6 +47,13 @@ public class Database {
                 break;
             case "show all":
                 reply = showall(message);
+                break;
+            case "show details":
+                reply = showdetails(message);
+                break;
+            case "write review":
+                reply = writereview(message);
+                break;
             default:
                 break;
         }
@@ -145,7 +152,7 @@ public class Database {
                 reply.put("identifier", "Don't exists.");
                 return reply;
             } else {
-                st = c.prepareStatement("select * from public.albums where id=" + message.get("identifier" + ";"));
+                st = c.prepareStatement("select * from public.albums where id=" + message.get("identifier") + ";");
                 rs = st.executeQuery();
                 if (rs.next()) {
                     reply.put("details", String.valueOf(rs.getInt(1)) + " Title:" + rs.getString(2) + " Description:" + rs.getString(3) + " Rate:" + String.valueOf(rs.getDouble(4)));
@@ -154,7 +161,7 @@ public class Database {
                     while (rs.next()) {
                         reply.put("Music:" + String.valueOf(rs.getInt(1)), "Title:" + rs.getString(2) + " Compositor:" + rs.getString(3) + " Duration:" + rs.getString(4) + " Genre:" + rs.getString(5));
                     }
-                    st = c.prepareStatement("select id,text from public.reviews where idalbum=" + message.get("identifier") + ";");
+                    st = c.prepareStatement("select id,text,rate from public.reviews where idalbum=" + message.get("identifier") + ";");
                     rs = st.executeQuery();
                     while (rs.next()) {
                         reply.put("Review:" + String.valueOf(rs.getInt(1)),"Rate:"+String.valueOf(rs.getDouble(3))+" Text:"+rs.getString(2));
@@ -181,9 +188,9 @@ public class Database {
             st.setString(1, message.get("text"));
             st.setInt(2, Integer.parseInt(message.get("identifier")));
             st.setDouble(3, Double.parseDouble(message.get("rate")));
-            rs = st.executeQuery();
+            st.executeUpdate();
             st = c.prepareStatement("update public.albums set rate=(select avg(public.reviews.rate) from public.albums,public.reviews where public.reviews.idalbum=" + message.get("identifier") + "and public.albums.id=" + message.get("identifier") + ");");
-            rs = st.executeQuery();
+            st.executeUpdate();
             reply.put("type", "write review");
             reply.put("msg", "sucessful");
             return reply;
