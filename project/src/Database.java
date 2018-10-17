@@ -1,4 +1,3 @@
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -54,7 +53,14 @@ public class Database {
             case "write review":
                 reply = writereview(message);
                 break;
+            case "search music":
+                reply = searchmusic(message);
+                break;
+            case "insert":
+                reply = searchmusic(message);
+                break;
             default:
+                System.out.println("Error on process function");
                 break;
         }
         return reply;
@@ -152,7 +158,20 @@ public class Database {
                 reply.put("type", "show details");
                 reply.put("identifier", "Don't exists.");
                 return reply;
-            } else {
+            }
+            else if(message.get("select").equals("musics")){
+                st = c.prepareStatement("select id,title,compositor,duration,genre from public.musics where idalbum=" + message.get("identifier") + ";");
+                rs = st.executeQuery();
+                if(rs.next()){
+                    reply.put("Music:" + String.valueOf(rs.getInt(1)), "Title:" + rs.getString(2) + " Compositor:" + rs.getString(3) + " Duration:" + rs.getString(4) + " Genre:" + rs.getString(5));
+                    return reply;
+                }
+                reply.put("type", "show details");
+                reply.put("identifier", "Don't exists.");
+                return reply;
+
+            }
+            else {
                 st = c.prepareStatement("select * from public.albums where id=" + message.get("identifier") + ";");
                 rs = st.executeQuery();
                 if (rs.next()) {
@@ -220,6 +239,51 @@ public class Database {
             return reply;
         } catch (Exception e) {
             reply.put("type", "search music");
+            reply.put("msg", e.getMessage());
+            return reply;
+        }
+    }
+
+    public HashMap<String, String> insert(HashMap<String, String> message) {
+        //exemplo -->type|insert;select|(artist,album,music);key|value
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            if (message.get("select").equals("artist")) {
+                st = c.prepareStatement("insert into public.artists(id,title,description) values(default,?,?);");
+                st.setString(1, message.get("name"));
+                st.setString(2, message.get("description"));
+                st.executeUpdate();
+                reply.put("type", "insert");
+                reply.put("select", "artist");
+                reply.put("msg", "sucessful");
+                return reply;
+            } else if (message.get("select").equals("album")) {
+                st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,?);");
+                st.setString(1, message.get("title"));
+                st.setString(2, message.get("description"));
+                st.setDouble(3, Double.parseDouble(message.get("rate")));
+                st.executeUpdate();
+                reply.put("type", "insert");
+                reply.put("select", "album");
+                reply.put("msg", "sucessful");
+                return reply;
+            } else { //music
+                st = c.prepareStatement("insert into public.musics (id,title,compositor,duration,genre,idalbum,idartist) values(default,?,?,?,?,?,?);");
+                st.setString(1, message.get("title"));
+                st.setString(2, message.get("compositor"));
+                st.setString(3, message.get("duration"));
+                st.setString(4, message.get("genre"));
+                st.setInt(5, Integer.parseInt(message.get("idalbum")));
+                st.setInt(6, Integer.parseInt(message.get("idartist")));
+                st.executeUpdate();
+                reply.put("type", "insert");
+                reply.put("select", "music");
+                reply.put("msg", "sucessful");
+                return reply;
+            }
+        } catch (Exception e) {
+            reply.put("type", "insert");
+            reply.put("select", message.get("select"));
             reply.put("msg", e.getMessage());
             return reply;
         }
