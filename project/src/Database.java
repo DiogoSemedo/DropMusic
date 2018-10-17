@@ -36,8 +36,8 @@ public class Database {
 
     private ArrayList<User> users = new ArrayList<>();
 
-    public HashMap<String, String> process(HashMap<String,String> message) {
-        HashMap<String,String> reply = new HashMap<String,String>();
+    public HashMap<String, String> process(HashMap<String, String> message) {
+        HashMap<String, String> reply = new HashMap<String, String>();
         switch (message.get("type")) {
             case "regist":
                 reply = regist(message);
@@ -60,8 +60,8 @@ public class Database {
         return reply;
     }
 
-    public HashMap<String,String> regist(HashMap<String, String> message) {
-        HashMap<String,String> reply = new HashMap<String,String>();
+    public HashMap<String, String> regist(HashMap<String, String> message) {
+        HashMap<String, String> reply = new HashMap<String, String>();
         //exemplo --> type|regist;username|name;password|pass
         try {
             st = c.prepareStatement("select name from public.users where name = '" + message.get("username") + "'");
@@ -90,7 +90,7 @@ public class Database {
         } catch (Exception e) {
             System.out.println(e.getMessage());
             reply.put("type", "status");
-            reply.put("regist","failed");
+            reply.put("regist", "failed");
             reply.put("msg", e.getMessage());
             return reply;
         }
@@ -120,17 +120,18 @@ public class Database {
             return reply;
         }
     }
-    public HashMap<String,String> showall(HashMap<String,String> message){
+
+    public HashMap<String, String> showall(HashMap<String, String> message) {
         //exemplo --> type|show all;select|(artists,albums,musics)
-        HashMap<String,String> reply = new HashMap<String,String>();
-        try{
-            st = c.prepareStatement("select id,title from public."+message.get("select")+";");
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            st = c.prepareStatement("select id,title from public." + message.get("select") + ";");
             rs = st.executeQuery();
-            while(rs.next()){
+            while (rs.next()) {
                 reply.put(String.valueOf(rs.getInt(1)), rs.getString(2));
             }
             return reply;
-        }catch (Exception e){
+        } catch (Exception e) {
             reply.put("type", "show all");
             reply.put("msg", e.getMessage());
             return reply;
@@ -164,7 +165,7 @@ public class Database {
                     st = c.prepareStatement("select id,text,rate from public.reviews where idalbum=" + message.get("identifier") + ";");
                     rs = st.executeQuery();
                     while (rs.next()) {
-                        reply.put("Review:" + String.valueOf(rs.getInt(1)),"Rate:"+String.valueOf(rs.getDouble(3))+" Text:"+rs.getString(2));
+                        reply.put("Review:" + String.valueOf(rs.getInt(1)), "Rate:" + String.valueOf(rs.getDouble(3)) + " Text:" + rs.getString(2));
                     }
                     return reply;
                 } else {
@@ -196,6 +197,29 @@ public class Database {
             return reply;
         } catch (Exception e) {
             reply.put("type", "write review");
+            reply.put("msg", e.getMessage());
+            return reply;
+        }
+    }
+
+    public HashMap<String, String> searchmusic(HashMap<String, String> message) {
+        //exemplo --> type|search music;select|(artist,album,music);text|asdasd
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            if (message.get("select").equals("artist")) {
+                st = c.prepareStatement("select id,title from public.musics where idartist=(select id from public.artists where title='" + message.get("text") + "');");
+            } else if (message.get("select").equals("album")) {
+                st = c.prepareStatement("select id,title from public.musics where idalbum=(select id from public.albums where title='" + message.get("text") + "');");
+            } else {
+                st = c.prepareStatement("select id,title from public.musics where genre=" + message.get("text") + "';");
+            }
+            rs = st.executeQuery();
+            while (rs.next()) {
+                reply.put(String.valueOf(rs.getInt(1)), rs.getString(2));
+            }
+            return reply;
+        } catch (Exception e) {
+            reply.put("type", "search music");
             reply.put("msg", e.getMessage());
             return reply;
         }
