@@ -59,6 +59,9 @@ public class Database {
             case "insert":
                 reply = searchmusic(message);
                 break;
+            case "remove":
+                reply = remove(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;
@@ -252,21 +255,11 @@ public class Database {
                 st = c.prepareStatement("insert into public.artists(id,title,description) values(default,?,?);");
                 st.setString(1, message.get("name"));
                 st.setString(2, message.get("description"));
-                st.executeUpdate();
-                reply.put("type", "insert");
-                reply.put("select", "artist");
-                reply.put("msg", "sucessful");
-                return reply;
             } else if (message.get("select").equals("album")) {
                 st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,?);");
                 st.setString(1, message.get("title"));
                 st.setString(2, message.get("description"));
                 st.setDouble(3, Double.parseDouble(message.get("rate")));
-                st.executeUpdate();
-                reply.put("type", "insert");
-                reply.put("select", "album");
-                reply.put("msg", "sucessful");
-                return reply;
             } else { //music
                 st = c.prepareStatement("insert into public.musics (id,title,compositor,duration,genre,idalbum,idartist) values(default,?,?,?,?,?,?);");
                 st.setString(1, message.get("title"));
@@ -275,14 +268,38 @@ public class Database {
                 st.setString(4, message.get("genre"));
                 st.setInt(5, Integer.parseInt(message.get("idalbum")));
                 st.setInt(6, Integer.parseInt(message.get("idartist")));
-                st.executeUpdate();
-                reply.put("type", "insert");
-                reply.put("select", "music");
-                reply.put("msg", "sucessful");
-                return reply;
             }
+            st.executeUpdate();
+            reply.put("type", "insert");
+            reply.put("select", message.get("select"));
+            reply.put("msg", "sucessful");
+            return reply;
         } catch (Exception e) {
             reply.put("type", "insert");
+            reply.put("select", message.get("select"));
+            reply.put("msg", e.getMessage());
+            return reply;
+        }
+    }
+
+    public HashMap<String, String> remove(HashMap<String, String> message) {
+        // exemplo --> type|remove;select|artist,album,music;identifier|1
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            if (message.get("select").equals("artist")) {
+                st = c.prepareStatement("delete from public.artists where id=" + message.get("identifier") + ";");
+            } else if (message.get("select").equals("album")) {
+                st = c.prepareStatement("delete from public.albums where id=" + message.get("identifier") + ";");
+            } else { //music
+                st = c.prepareStatement("delete from public.musics where id=" + message.get("identifier") + ";");
+            }
+            st.executeUpdate();
+            reply.put("type", "remove");
+            reply.put("select", message.get("select"));
+            reply.put("msg", "sucessful");
+            return reply;
+        } catch (Exception e) {
+            reply.put("type", "remove");
             reply.put("select", message.get("select"));
             reply.put("msg", e.getMessage());
             return reply;
