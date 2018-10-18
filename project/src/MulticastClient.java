@@ -163,8 +163,6 @@ class MulticastUser extends Thread {
             System.out.println("Less than 300 characters pls!!! Write your review:");
         }
         return read;
-
-
     }
     public void run() {
         MulticastSocket socket = null;

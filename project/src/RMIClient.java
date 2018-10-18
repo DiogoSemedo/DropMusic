@@ -9,7 +9,7 @@ import java.util.Scanner;
 
 public class RMIClient {
 
-    public void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException{
+    public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException{
         RMIInterface rmi = (RMIInterface) Naming.lookup("dropmusic");
         System.out.println("Client ready...");
         boolean login = false;
@@ -39,13 +39,66 @@ public class RMIClient {
 
             }
             else if(login){
+                String readKeyboard = keyboardScanner.nextLine();
+                switch (readKeyboard){
+                    case "help":
+                        System.out.println("         search music");
+                        System.out.println("           show all");
+                        System.out.println("         more details");
+                        System.out.println(" ---- Editor Permission ----");
+                        System.out.println("           insert");
+                        System.out.println("           remove");
+
+                        break;
+                    case "search music":
+                        message.put("type","search music");
+
+
+                        break;
+                    case "show all":
+                        message.put("type","show all");
+                        message.put("select",rmi.select());
+                        //done
+                        break;
+                    case "show details":
+                        message.put("type","more details");
+                        message.put("select",rmi.select());
+                        message.put("id",rmi.selectId());
+                        //done
+                        break;
+                    case "insert":
+                        message = rmi.insert(message);
+                        //done
+                        break;
+                    case "remove":
+                        message.put("type","remove");
+                        message.put("select",rmi.selectId());
+                        message.put("identifier",rmi.selectId());
+                        //done
+                        break;
+                    case "write review":
+                        message.put("type","write review");
+                        message.put("identifier",rmi.selectId());
+                        message.put("rate",rmi.rate());
+                        message.put("text",rmi.review());
+                        //done
+                        break;
+                    case "update":
+                        //to implement
+                        break;
+                    default:
+                        System.out.println("Wrong comand");
+                        break;
+                        //nota write review
+                }
+                //message tem a request falta enviar e receber a reply
 
             }
         }
 
     }
 
-    public void printMessage(HashMap<String,String> message){
+    public static void printMessage(HashMap<String,String> message){
         for (HashMap.Entry<String, String> entry : message.entrySet()) {
             System.out.println(entry.getKey() + " : " + entry.getValue());
         }
