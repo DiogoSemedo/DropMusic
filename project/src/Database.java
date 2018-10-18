@@ -5,6 +5,7 @@ import java.util.*;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ExecutionException;
 
 public class Database {
     public class User {
@@ -61,6 +62,9 @@ public class Database {
                 break;
             case "remove":
                 reply = remove(message);
+                break;
+            case "edit":
+                reply = edit(message);
                 break;
             default:
                 System.out.println("Error on process function");
@@ -295,6 +299,24 @@ public class Database {
             }
             st.executeUpdate();
             reply.put("type", "remove");
+            reply.put("select", message.get("select"));
+            reply.put("msg", "sucessful");
+            return reply;
+        } catch (Exception e) {
+            reply.put("type", "remove");
+            reply.put("select", message.get("select"));
+            reply.put("msg", e.getMessage());
+            return reply;
+        }
+    }
+
+    public HashMap<String, String> edit(HashMap<String, String> message) {
+        //exemplo --> type|edit;select|artist,album,music;identifier|2;key|description;value|bananas sao boas
+        HashMap<String, String> reply = new HashMap<String, String>();
+        try {
+            st = c.prepareStatement("update public." + message.get("select") + " set " + message.get("key") + "=" + message.get("value") + " where id=" + message.get("identifier") + ";");
+            st.executeUpdate();
+            reply.put("type", "edit");
             reply.put("select", message.get("select"));
             reply.put("msg", "sucessful");
             return reply;
