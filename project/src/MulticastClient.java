@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.MulticastSocket;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.sql.SQLOutput;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -146,6 +147,25 @@ class MulticastUser extends Thread {
         return message;
 
     }
+
+    public String rate(){
+        Scanner keyboardScanner = new Scanner(System.in);
+        System.out.println("Rate between 0 - 10:");
+        return String.valueOf(keyboardScanner.nextDouble());
+
+    }
+
+    public String review(){
+        Scanner keyboardScanner = new Scanner(System.in);
+        System.out.println("Write your review:");
+        String read;
+        while((read=keyboardScanner.nextLine()).length() > 300){
+            System.out.println("Less than 300 characters pls!!! Write your review:");
+        }
+        return read;
+
+
+    }
     public void run() {
         MulticastSocket socket = null;
         System.out.println(this.getName() + " ready...");
@@ -155,6 +175,7 @@ class MulticastUser extends Thread {
             Scanner keyboardScanner = new Scanner(System.in);
             ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
             ObjectOutputStream out = new ObjectOutputStream(byteOut);
+
             while (true) {
                 System.out.println("Select option: (help to get help) ");
                 String readKeyboard = keyboardScanner.nextLine();
@@ -187,7 +208,6 @@ class MulticastUser extends Thread {
                     case "insert":
                         message = insert(message);
                         //done
-
                         break;
                     case "remove":
                         message.put("type","remove");
@@ -195,14 +215,24 @@ class MulticastUser extends Thread {
                         message.put("identifier",selectId());
                         //done
                         break;
+                    case "write review":
+                        message.put("type","write review");
+                        message.put("identifier",selectId());
+                        message.put("rate",rate());
+                        message.put("text",review());
+                        //done
+                        break;
+                    case "update":
+                        //to implement
+                        break;
                     default:
                         System.out.println("Wrong comand");
                         break;
                         //nota write review
                 }*/
-                message.put("type","show details");
-                message.put("select","albums");
-                message.put("identifier","1");
+                message.put("type","search music");
+                message.put("select","album");
+                message.put("text","Eu faço 69");
                 out.writeObject(message);
                 InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
                 byte[] buffer = byteOut.toByteArray();
