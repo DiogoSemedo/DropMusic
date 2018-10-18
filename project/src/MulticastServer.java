@@ -22,7 +22,6 @@ public class MulticastServer extends Thread {
         MulticastSocket socket = null;
         MulticastSocket reply = null;
         long counter = 0;
-        String messageReply = "teste";
         System.out.println(this.getName() + " running...");
         try {
             socket = new MulticastSocket(PORT);  // create socket without binding it (only for receving)
@@ -80,6 +79,7 @@ public class MulticastServer extends Thread {
             socket.close();
         }
     }
+
     /*
     class Reply extends Thread {
         MulticastSocket socket = null;
