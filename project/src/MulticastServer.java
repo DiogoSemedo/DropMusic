@@ -61,8 +61,6 @@ public class MulticastServer extends Thread {
                     message.clear();
                     out.writeObject(replyM);
                     byte[] replyBuffer = byteOut.toByteArray();
-                    System.out.println(byteOut.size());
-                    System.out.println(replyBuffer.length);
                     DatagramPacket packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupR, PORT);
                     //testar funcao packet.setAddress
                     //socket.setTimeToLive(100);

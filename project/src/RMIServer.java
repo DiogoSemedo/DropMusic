@@ -149,90 +149,82 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return message;
     }
 
-    public String review() {
-        Scanner keyboardScanner = new Scanner(System.in);
-        System.out.println("Write your review:");
+    public String review(RMIInterfaceClient client) throws RemoteException{
+        client.print_on_client("Write your review:");
         String read;
-        while ((read = keyboardScanner.nextLine()).length() > 300) {
-            System.out.println("Less than 300 characters pls!!! Write your review:");
+        while ((read = client.getInput()).length() > 300) {
+            client.print_on_client("Less than 300 characters pls!!! Write your review:");
         }
         return read;
     }
 
-    public String selectId() {
-        Scanner keyboardScanner = new Scanner(System.in);
-        String read = keyboardScanner.nextLine();
-        while (true) {
-            try {
-                System.out.println("Select ID");
-                return String.valueOf(Integer.parseInt(read));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
+    public String selectId(RMIInterfaceClient client) throws RemoteException{
+        client.print_on_client("Select ID");
+        return client.getInput();
     }
 
-    public String select() {
+    public String select(RMIInterfaceClient client) throws RemoteException {
 
-        Scanner keyboardScanner = new Scanner(System.in);
         while (true) {
-            System.out.println("Choose: 1-artists 2-albums 3-musics");
-            String read = keyboardScanner.nextLine();
-            switch (read) {
+            client.print_on_client("Choose: 1-artist 2-album 3-music");
+
+            switch (client.getInput()) {
                 case "1":
-                    return "artists";
+                    return "artist";
                 case "2":
-                    return "albums";
+                    return "album";
                 case "3":
-                    return "musics";
+                    return "music";
                 default:
-                    System.out.println("Try again");
+                    client.print_on_client("Try again");
                     break;
             }
         }
     }
 
-    public HashMap<String, String> insert(HashMap<String, String> message) {
-        Scanner keyboardScanner = new Scanner(System.in);
+    public HashMap<String, String> insert(HashMap<String, String> message, RMIInterfaceClient client) throws RemoteException{
         message.put("type", "insert");
-        String select = select();
+        String select = select(client);
         message.put("select", select);
         //sem defesa de inputs
         switch (select) {
-            case "artists":
-                System.out.println("Title:");
-                message.put("title", keyboardScanner.nextLine());
-                System.out.println("Description:");
-                message.put("description", keyboardScanner.nextLine());
+            case "artist":
+                client.print_on_client("Name:");
+                message.put("name", client.getInput());
+                client.print_on_client("Description:");
+                message.put("description", client.getInput());
                 break;
-            case "albums":
-                System.out.println("Title:");
-                message.put("title", keyboardScanner.nextLine());
-                System.out.println("Description:");
-                message.put("description", keyboardScanner.nextLine());
-                System.out.println("Rate:");
-                message.put("rate", String.valueOf(keyboardScanner.nextDouble()));
+            case "album":
+                client.print_on_client("Title:");
+                message.put("title", client.getInput());
+                client.print_on_client("Description:");
+                message.put("description", client.getInput());
+                client.print_on_client("Rate:");
+                message.put("rate", client.getInput());
                 break;
-            case "musics":
-                System.out.println("Title:");
-                message.put("title", keyboardScanner.nextLine());
-                System.out.println("Compositor:");
-                message.put("compositor", keyboardScanner.nextLine());
-                System.out.println("Duration:");
-                message.put("duration", keyboardScanner.nextLine());
-                System.out.println("Genre:");
-                message.put("genre", keyboardScanner.nextLine());
+            case "music":
+                client.print_on_client("Title:");
+                message.put("title", client.getInput());
+                client.print_on_client("Compositor:");
+                message.put("compositor", client.getInput());
+                client.print_on_client("Duration:");
+                message.put("duration", client.getInput());
+                client.print_on_client("Genre:");
+                message.put("genre", client.getInput());
+                client.print_on_client("Artist Id:");
+                message.put("idartist",client.getInput());
+                client.print_on_client("Album Id:");
+                message.put("idalbum",client.getInput());
                 break;
         }
         return message;
 
     }
 
-    public String rate() {
-        Scanner keyboardScanner = new Scanner(System.in);
-        System.out.println("Rate between 0 - 10:");
-        return String.valueOf(keyboardScanner.nextDouble());
+    public String rate(RMIInterfaceClient client) throws  RemoteException{
+
+        client.print_on_client("Rate between 0 - 10:");
+        return client.getInput();
 
     }
 

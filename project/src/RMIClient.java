@@ -50,11 +50,13 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                     default:
                         System.out.println("Wrong command");
                         break;
+
                 }
+                keyboardScanner.nextLine();//limpa a buffershow
 
             } else if (login) {
-                String readKeyboard = keyboardScanner.nextLine();
-                switch (readKeyboard) {
+
+                switch (keyboardScanner.nextLine()) {
                     case "help":
                         System.out.println("         search music");
                         System.out.println("           show all");
@@ -73,38 +75,38 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         break;
                     case "show all":
                         message.put("type", "show all");
-                        message.put("select", rmi.select());
+                        message.put("select", rmi.select( (RMIInterfaceClient) c));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
                     case "show details":
-                        message.put("type", "more details");
-                        message.put("select", rmi.select());
-                        message.put("id", rmi.selectId());
+                        message.put("type", "show details");
+                        message.put("select", rmi.select( (RMIInterfaceClient) c));
+                        message.put("identifier", rmi.selectId( (RMIInterfaceClient) c));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
                     case "insert":
-                        message = rmi.insert(message);
+                        message = rmi.insert(message, (RMIInterfaceClient) c);
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
                     case "remove":
                         message.put("type", "remove");
-                        message.put("select", rmi.selectId());
-                        message.put("identifier", rmi.selectId());
+                        message.put("select", rmi.select( (RMIInterfaceClient) c));
+                        message.put("identifier", rmi.selectId( (RMIInterfaceClient) c));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
                     case "write review":
                         message.put("type", "write review");
-                        message.put("identifier", rmi.selectId());
-                        message.put("rate", rmi.rate());
-                        message.put("text", rmi.review());
+                        message.put("identifier", rmi.selectId((RMIInterfaceClient) c));
+                        message.put("rate", rmi.rate( (RMIInterfaceClient) c));
+                        message.put("text", rmi.review( (RMIInterfaceClient) c));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
