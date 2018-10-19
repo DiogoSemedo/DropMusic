@@ -1,6 +1,7 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.*;
 import java.util.*;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class Database {
     public Database() {
         try {
             Class.forName("org.postgresql.Driver");
-            this.c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database", "postgres", "surawyk");
+            this.c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database", "postgres", "zubiru");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

@@ -7,6 +7,7 @@ import java.util.HashMap;
 public class MulticastServer extends Thread {
     private int BUFFER_SIZE = 2048;
     private String MULTICAST_ADDRESS = "224.0.224.0";
+    private String MULTICAST_ADDRESS_2 = "224.0.224.1";
     private int PORT = 4321;
     private Database db = new Database();
     public static void main(String[] args) {
@@ -27,11 +28,12 @@ public class MulticastServer extends Thread {
             socket = new MulticastSocket(PORT);  // create socket without binding it (only for receving)
             reply = new MulticastSocket();
             InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
+            InetAddress groupR = InetAddress.getByName(MULTICAST_ADDRESS_2);
             socket.joinGroup(group);
             ByteArrayInputStream byteIn;
             ObjectInputStream in;
             HashMap<String,String> message;
-            HashMap<String,String> replyM;
+            HashMap<String,String> replyM = new HashMap<>();
 
             while (true) {
                 ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
@@ -39,7 +41,7 @@ public class MulticastServer extends Thread {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet);//espera até receber
-                if(socket.getLocalPort() != packet.getPort()) {
+                if(reply.getLocalPort() != packet.getPort()) {
                     System.out.println("Recebi: " + packet.getAddress().getHostAddress() + ":" + packet.getPort());
 
                     byteIn = new ByteArrayInputStream(packet.getData());
@@ -57,13 +59,14 @@ public class MulticastServer extends Thread {
                     }
                     System.out.println("fim do que vou enviar");
                     message.clear();
-
                     out.writeObject(replyM);
                     byte[] replyBuffer = byteOut.toByteArray();
-                    DatagramPacket packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, group, PORT);
+                    System.out.println(byteOut.size());
+                    System.out.println(replyBuffer.length);
+                    DatagramPacket packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupR, PORT);
                     //testar funcao packet.setAddress
                     //socket.setTimeToLive(100);
-                    socket.send(packetReply);
+                    reply.send(packetReply);
                     replyM.clear();
                     byteOut.close();
                     out.close();
