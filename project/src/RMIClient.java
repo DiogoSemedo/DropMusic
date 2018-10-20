@@ -97,17 +97,15 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         //done
                         break;
                     case "insert":
-                        message.put("identifier",ClientID);
                         message = rmi.insert(message, (RMIInterfaceClient) c);
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
                     case "remove":
-                        message.put("identifier",ClientID);
                         message.put("type", "remove");
                         message.put("select", rmi.select( (RMIInterfaceClient) c));
-                        message.put("id", rmi.selectId( (RMIInterfaceClient) c));
+                        message.put("identifier", rmi.selectId( (RMIInterfaceClient) c));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
@@ -123,13 +121,16 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         break;
                     case "edit":
                         //done
-                        message.put("identifier",ClientID);
                         message.put("type","edit");
                         message.put("select",rmi.select((RMIInterfaceClient) c));
                         message.put("key",rmi.selectKey( (RMIInterfaceClient) c, message.get("select")));
                         message.put("value",rmi.selectValue((RMIInterfaceClient) c));
-                        message.put("id",rmi.selectId((RMIInterfaceClient) c));
+                        message.put("identifier",rmi.selectId((RMIInterfaceClient) c));
                         message = rmi.request(message);
+                        if(message.get("select").equals("album") && message.get("key").equals("description")){
+                            //quando é preciso enviar notificações
+                            rmi.sendNotification(message.get("select"),message.get("identifier"));
+                        }
                         rmi.printMessage(message,(RMIInterfaceClient) c);
                         break;
                     case "promote":
