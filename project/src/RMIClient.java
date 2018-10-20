@@ -29,6 +29,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         boolean login = false;
         HashMap<String, String> message = new HashMap<>();
         Scanner keyboardScanner = new Scanner(System.in);
+        String ClientID = null;
         while (true) {
             message.clear();
             if (!login) {
@@ -44,6 +45,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
 
                         if (message.get("login").equals("successful")) {//verificar se o regist foi bem sucedido
                             //login sucessful
+                            ClientID = message.get("identifier");
                             login = true;
                         }
                         break;
@@ -60,17 +62,22 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                     case "help":
                         System.out.println("         search music");
                         System.out.println("           show all");
-                        System.out.println("         more details");
+                        System.out.println("         show details");
+                        System.out.println("          write review");
                         System.out.println(" ---- Editor Permission ----");
                         System.out.println("           insert");
                         System.out.println("           remove");
+                        System.out.println("            edit");
 
                         break;
                     case "search music":
                         message.put("type", "search music");
+                        message.put("select",rmi.select((RMIInterfaceClient) c));
+                        System.out.println("Search input:");
+                        message.put("text", keyboardScanner.nextLine());
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
-                        //to implement
+                        //done
 
                         break;
                     case "show all":
@@ -111,8 +118,14 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
-                    case "update":
-                        //to implement
+                    case "edit":
+                        //done
+                        message.put("type","edit");
+                        message.put("select",rmi.select((RMIInterfaceClient) c));
+                        message.put("key",rmi.selectKey( (RMIInterfaceClient) c, message.get("select")));
+                        message.put("value",rmi.selectValue((RMIInterfaceClient) c));
+                        message.put("identifier",rmi.selectId((RMIInterfaceClient) c));
+
                         break;
                     default:
                         System.out.println("Wrong comand");

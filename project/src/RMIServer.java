@@ -1,7 +1,10 @@
 import java.io.*;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.MulticastSocket;
+import java.rmi.AlreadyBoundException;
+import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
@@ -18,9 +21,20 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         super();
     }
 
-    public static void main(String[] args) throws RemoteException {
+    public static void main(String[] args) throws RemoteException, MalformedURLException, InterruptedException {
         RMIInterfaceServer rmi = new RMIServer();
-        LocateRegistry.createRegistry(1099).rebind("dropmusic", rmi);
+        /*while(true) {
+            try {
+                Naming.bind("dropmusic", rmi);
+
+                System.out.println("Server ready...");
+                return;
+            } catch (AlreadyBoundException e) {
+                System.out.println("sou secundário");
+                Thread.sleep(1000);
+            }
+        }*/
+        LocateRegistry.createRegistry(1099).rebind("dropmusic",rmi);
         System.out.println("Server ready...");
     }
 
@@ -232,6 +246,54 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         for (HashMap.Entry<String, String> entry : message.entrySet()) {
             client.print_on_client(entry.getKey() + " : " + entry.getValue());
         }
+    }
+
+    public String selectKey(RMIInterfaceClient client, String select) throws RemoteException{
+        switch (select){
+
+            case"artist":
+                client.print_on_client("Choose what you want do edit:\n1 - Name\n2 - Description");
+                switch (client.getInput()){
+                    case"1":
+                        return "title";
+                    case "2":
+                        return "description";
+                }
+                break;
+            case"album":
+                client.print_on_client("Choose what you want to edit:\n1 - Title\n2 - Description");
+                switch (client.getInput()){
+                    case"1":
+                        return "title";
+                    case "2":
+                        return "description";
+                }
+                break;
+            case"music":
+                client.print_on_client("Choose what you want to edit:\n1 - Title\n2 - Compositor\n3 - Duration\n4 - Genre\n5 - Id Album\n6 - Id Artist");
+                switch (client.getInput()){
+                    case"1":
+                        return "title";
+                    case "2":
+                        return "compositor";
+                    case "3":
+                        return "duration";
+                    case "4":
+                        return "genre";
+                    case "5":
+                        return "idalbum";
+                    case "6":
+                        return "idartist";
+                }
+                break;
+
+        }
+        return "Wrong Input";
+    }
+
+    public String selectValue(RMIInterfaceClient client) throws RemoteException{
+        client.print_on_client("Input the new value:");
+        return client.getInput();
     }
 
 
