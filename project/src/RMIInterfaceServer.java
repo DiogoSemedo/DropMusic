@@ -15,4 +15,6 @@ public interface RMIInterfaceServer extends Remote{
     public void printMessage(HashMap<String,String> message, RMIInterfaceClient client)  throws RemoteException;
     public String selectKey(RMIInterfaceClient client, String select) throws RemoteException;
     public String selectValue (RMIInterfaceClient client) throws RemoteException;
+    public void addRef(String ClientID,RMIInterfaceClient client) throws RemoteException;
+    public HashMap<String,String> promote(HashMap<String,String> message) throws RemoteException;
 }

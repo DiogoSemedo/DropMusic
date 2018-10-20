@@ -47,6 +47,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             //login sucessful
                             ClientID = message.get("identifier");
                             login = true;
+                            rmi.addRef(ClientID,(RMIInterfaceClient) c);
                         }
                         break;
                     default:
@@ -125,8 +126,16 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("key",rmi.selectKey( (RMIInterfaceClient) c, message.get("select")));
                         message.put("value",rmi.selectValue((RMIInterfaceClient) c));
                         message.put("identifier",rmi.selectId((RMIInterfaceClient) c));
-
+                        message = rmi.request(message);
+                        rmi.printMessage(message,(RMIInterfaceClient) c);
                         break;
+                    case "promote":
+                        message.put("type","promote");
+                        message.put("identifier",ClientID);
+                        System.out.println("Username to promote:");
+                        message.put("username",keyboardScanner.nextLine());
+                        message = rmi.promote(message);
+                        rmi.printMessage(message,(RMIInterfaceClient) c);
                     default:
                         System.out.println("Wrong comand");
                         break;
@@ -134,6 +143,5 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                 }
             }
         }
-
     }
 }

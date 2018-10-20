@@ -70,6 +70,9 @@ public class Database {
             case "promote":
                 reply = promote(message);
                 break;
+            case "insert notification":
+                reply = insertnotification(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;
@@ -364,7 +367,7 @@ public class Database {
         // type|promote;identifier|1;username|"Claudio"
         HashMap<String,String> reply = new HashMap<String, String>();
         try{
-            st = c.prepareStatement("select id from public.users where username='"+message.get("username")+"';");
+            st = c.prepareStatement("select id from public.users where name='"+message.get("username")+"';");
             rs = st.executeQuery();
             if(rs.next()) { //se a pessoa a que vai ser atribuida o privilegio existir
                 reply.put("identifier",String.valueOf(rs.getInt(1)));
@@ -378,10 +381,9 @@ public class Database {
                 else if (checkPermission(message)) { //verificar se quem vai atribuir possui privilégio
                     st = c.prepareStatement("update public.users set permission=true where id="+reply.get("identifier")+";");
                     st.executeUpdate();
-                    reply.clear();
                     reply.put("type","promote");
                     reply.put("username",message.get("username"));
-                    reply.put("msg","Privilégio atribuido com sucesso.");
+                    reply.put("msg","successful");
                     return reply;
                 }
                 reply.clear();
@@ -410,4 +412,22 @@ public class Database {
         }
         return false;
     }
+
+    public HashMap<String,String> insertnotification(HashMap<String,String> message){
+        HashMap<String,String> reply = new HashMap<String,String>();
+        try{
+            st = c.prepareStatement("insert into public.notification (iduser,msg) values(?,?);");
+            st.setInt(1,Integer.parseInt(message.get("identifier")));
+            st.setString(2,message.get("msg"));
+            st.executeUpdate();
+            reply.put("type","insert notification");
+            reply.put("msg","successful");
+            return reply;
+        } catch (Exception e){
+            reply.put("type","insert notification");
+            reply.put("msg",e.getMessage());
+            return reply;
+        }
+    }
+    
 }

@@ -8,6 +8,7 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -16,7 +17,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private int PORT = 4321;
     private String MULTICAST_ADDRESS_2 = "224.0.224.1";
-
+    private HashMap<String,RMIInterfaceClient> references = new HashMap<String,RMIInterfaceClient>();
     public RMIServer() throws RemoteException {
         super();
     }
@@ -163,6 +164,24 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return message;
     }
 
+    public HashMap<String,String> promote(HashMap<String,String> message) throws RemoteException{
+        message = request(message);
+        if(message.get("msg").equals("successful")) {
+            RMIInterfaceClient c = (RMIInterfaceClient) references.get(message.get("identifier"));
+            if(c==null){
+                HashMap<String,String> reply = new HashMap<String,String>();
+                reply.put("identifier",message.get("identifier"));
+                reply.put("msg","Promoted to editor.");
+                reply.put("type","insert notification");
+                request(message);
+            }
+            else {
+                c.print_on_client("Promoted to editor.");
+            }
+        }
+        return message;
+    }
+
     public String review(RMIInterfaceClient client) throws RemoteException{
         client.print_on_client("Write your review:");
         String read;
@@ -296,5 +315,8 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return client.getInput();
     }
 
+    public void addRef(String ClientID,RMIInterfaceClient client) throws RemoteException{
+        references.put(ClientID, (RMIInterfaceClient) client);
+    }
 
 }
