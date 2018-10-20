@@ -59,13 +59,16 @@ public class Database {
                 reply = searchmusic(message);
                 break;
             case "insert":
-                reply = searchmusic(message);
+                reply = insert(message);
                 break;
             case "remove":
                 reply = remove(message);
                 break;
             case "edit":
                 reply = edit(message);
+                break;
+            case "promote":
+                reply = promote(message);
                 break;
             default:
                 System.out.println("Error on process function");
@@ -88,7 +91,7 @@ public class Database {
             }
             st = c.prepareStatement("select count(name) from public.users");
             rs = st.executeQuery();
-            st = c.prepareStatement("INSERT INTO public.users(id,name, password, permission) VALUES (DEFAULT,?, ?, ?);");
+            st = c.prepareStatement("insert into public.users(id,name, password, permission) values (DEFAULT,?, ?, ?);");
             st.setString(1, message.get("username"));
             st.setString(2, message.get("password"));
             if (rs.next() && rs.getInt(1) == 0) {
@@ -118,9 +121,14 @@ public class Database {
             rs = st.executeQuery();
             if (rs.next() && rs.getBoolean(1)) {
                 st = c.prepareStatement("update public.users set status=true where name='" + message.get("username") + "';");
+                st.executeUpdate();
+                st = c.prepareStatement("select id from public.users where name='"+message.get("username")+"';");
+                rs = st.executeQuery();
+                rs.next();
                 reply.put("type", "status");
                 reply.put("login", "successful");
                 reply.put("msg", "You're logged in.");
+                reply.put("identifier",String.valueOf(rs.getInt(1)));
                 return reply;
             }
             reply.put("type", "status");
@@ -136,10 +144,10 @@ public class Database {
     }
 
     public HashMap<String, String> showall(HashMap<String, String> message) {
-        //exemplo --> type|show all;select|(artists,albums,musics)
+        //exemplo --> type|show all;select|(artist,album,music)
         HashMap<String, String> reply = new HashMap<String, String>();
         try {
-            st = c.prepareStatement("select id,title from public." + message.get("select") + ";");
+            st = c.prepareStatement("select id,title from public." + message.get("select") + "s;");
             rs = st.executeQuery();
             while (rs.next()) {
                 reply.put(String.valueOf(rs.getInt(1)), rs.getString(2));
@@ -153,10 +161,10 @@ public class Database {
     }
 
     public HashMap<String, String> showdetails(HashMap<String, String> message) {
-        //exemplo --> type|show details;select|(artists,albums);identifier|(1,5,19)
+        //exemplo --> type|show details;select|(artist,album,music);identifier|(1,5,19)
         HashMap<String, String> reply = new HashMap<String, String>();
         try {
-            if (message.get("select").equals("artists")) {
+            if (message.get("select").equals("artist")) {
                 st = c.prepareStatement("select * from public.artists where id=" + message.get("identifier") + ";");
                 rs = st.executeQuery();
                 if (rs.next()) {
@@ -167,7 +175,7 @@ public class Database {
                 reply.put("identifier", "Don't exists.");
                 return reply;
             }
-            else if(message.get("select").equals("musics")){
+            else if(message.get("select").equals("music")){
                 st = c.prepareStatement("select id,title,compositor,duration,genre from public.musics where idalbum=" + message.get("identifier") + ";");
                 rs = st.executeQuery();
                 if(rs.next()){
@@ -253,31 +261,37 @@ public class Database {
     }
 
     public HashMap<String, String> insert(HashMap<String, String> message) {
-        //exemplo -->type|insert;select|(artist,album,music);key|value
+        //exemplo -->type|insert;select|(artist,album,music);key|value;identifier|2
         HashMap<String, String> reply = new HashMap<String, String>();
         try {
-            if (message.get("select").equals("artist")) {
-                st = c.prepareStatement("insert into public.artists(id,title,description) values(default,?,?);");
-                st.setString(1, message.get("name"));
-                st.setString(2, message.get("description"));
-            } else if (message.get("select").equals("album")) {
-                st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,?);");
-                st.setString(1, message.get("title"));
-                st.setString(2, message.get("description"));
-                st.setDouble(3, Double.parseDouble(message.get("rate")));
-            } else { //music
-                st = c.prepareStatement("insert into public.musics (id,title,compositor,duration,genre,idalbum,idartist) values(default,?,?,?,?,?,?);");
-                st.setString(1, message.get("title"));
-                st.setString(2, message.get("compositor"));
-                st.setString(3, message.get("duration"));
-                st.setString(4, message.get("genre"));
-                st.setInt(5, Integer.parseInt(message.get("idalbum")));
-                st.setInt(6, Integer.parseInt(message.get("idartist")));
+            if(checkPermission(message)) {
+                if (message.get("select").equals("artist")) {
+                    st = c.prepareStatement("insert into public.artists(id,title,description) values(default,?,?);");
+                    st.setString(1, message.get("name"));
+                    st.setString(2, message.get("description"));
+                } else if (message.get("select").equals("album")) {
+                    st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,?);");
+                    st.setString(1, message.get("title"));
+                    st.setString(2, message.get("description"));
+                    st.setDouble(3, Double.parseDouble(message.get("rate")));
+                } else { //music
+                    st = c.prepareStatement("insert into public.musics (id,title,compositor,duration,genre,idalbum,idartist) values(default,?,?,?,?,?,?);");
+                    st.setString(1, message.get("title"));
+                    st.setString(2, message.get("compositor"));
+                    st.setString(3, message.get("duration"));
+                    st.setString(4, message.get("genre"));
+                    st.setInt(5, Integer.parseInt(message.get("idalbum")));
+                    st.setInt(6, Integer.parseInt(message.get("idartist")));
+                }
+                st.executeUpdate();
+                reply.put("type", "insert");
+                reply.put("select", message.get("select"));
+                reply.put("msg", "sucessful");
+                return reply;
             }
-            st.executeUpdate();
             reply.put("type", "insert");
             reply.put("select", message.get("select"));
-            reply.put("msg", "sucessful");
+            reply.put("msg", "Não possui privilégios de editor.");
             return reply;
         } catch (Exception e) {
             reply.put("type", "insert");
@@ -291,17 +305,23 @@ public class Database {
         // exemplo --> type|remove;select|artist,album,music;identifier|1
         HashMap<String, String> reply = new HashMap<String, String>();
         try {
-            if (message.get("select").equals("artist")) {
-                st = c.prepareStatement("delete from public.artists where id=" + message.get("identifier") + ";");
-            } else if (message.get("select").equals("album")) {
-                st = c.prepareStatement("delete from public.albums where id=" + message.get("identifier") + ";");
-            } else { //music
-                st = c.prepareStatement("delete from public.musics where id=" + message.get("identifier") + ";");
+            if(checkPermission(message)){
+                if (message.get("select").equals("artist")) {
+                    st = c.prepareStatement("delete from public.artists where id=" + message.get("identifier") + ";");
+                } else if (message.get("select").equals("album")) {
+                    st = c.prepareStatement("delete from public.albums where id=" + message.get("identifier") + ";");
+                } else { //music
+                    st = c.prepareStatement("delete from public.musics where id=" + message.get("identifier") + ";");
+                }
+                st.executeUpdate();
+                reply.put("type", "remove");
+                reply.put("select", message.get("select"));
+                reply.put("msg", "sucessful");
+                return reply;
             }
-            st.executeUpdate();
             reply.put("type", "remove");
             reply.put("select", message.get("select"));
-            reply.put("msg", "sucessful");
+            reply.put("msg","Não possui privilégios de editor.");
             return reply;
         } catch (Exception e) {
             reply.put("type", "remove");
@@ -315,11 +335,22 @@ public class Database {
         //exemplo --> type|edit;select|artist,album,music;identifier|2;key|description;value|bananas sao boas
         HashMap<String, String> reply = new HashMap<String, String>();
         try {
-            st = c.prepareStatement("update public." + message.get("select") + " set " + message.get("key") + "=" + message.get("value") + " where id=" + message.get("identifier") + ";");
-            st.executeUpdate();
+            if(checkPermission(message)) {
+                if(message.get("key").equals("idalbum") || message.get("key").equals("idartist")){
+                    st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "=" + message.get("value") + " where id=" + message.get("identifier") + ";");
+                }
+                else {
+                    st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "='" + message.get("value") + "' where id=" + message.get("identifier") + ";");
+                }
+                st.executeUpdate();
+                reply.put("type", "edit");
+                reply.put("select", message.get("select"));
+                reply.put("msg", "sucessful");
+                return reply;
+            }
             reply.put("type", "edit");
             reply.put("select", message.get("select"));
-            reply.put("msg", "sucessful");
+            reply.put("msg","Não possui privilégios de editor.");
             return reply;
         } catch (Exception e) {
             reply.put("type", "remove");
@@ -327,5 +358,56 @@ public class Database {
             reply.put("msg", e.getMessage());
             return reply;
         }
+    }
+
+    public HashMap<String,String> promote(HashMap<String,String> message){
+        // type|promote;identifier|1;username|"Claudio"
+        HashMap<String,String> reply = new HashMap<String, String>();
+        try{
+            st = c.prepareStatement("select id from public.users where username='"+message.get("username")+"';");
+            rs = st.executeQuery();
+            if(rs.next()) { //se a pessoa a que vai ser atribuida o privilegio existir
+                reply.put("identifier",String.valueOf(rs.getInt(1)));
+                if(checkPermission(reply)){ //se já tiver privilégio
+                    reply.clear();
+                    reply.put("type","promote");
+                    reply.put("username",message.get("username"));
+                    reply.put("msg","O utilizador já possui previlégio de editor.");
+                    return reply;
+                }
+                else if (checkPermission(message)) { //verificar se quem vai atribuir possui privilégio
+                    st = c.prepareStatement("update public.users set permission=true where id="+reply.get("identifier")+";");
+                    st.executeUpdate();
+                    reply.clear();
+                    reply.put("type","promote");
+                    reply.put("username",message.get("username"));
+                    reply.put("msg","Privilégio atribuido com sucesso.");
+                    return reply;
+                }
+                reply.clear();
+                reply.put("type","promote");
+                reply.put("username",message.get("username"));
+                reply.put("msg","Não possui permissões para atribuir privilégio.");
+            }
+            reply.put("type","promote");
+            reply.put("username",message.get("username"));
+            reply.put("msg","O utilizador ao qual pretende atribuir privilégio não existe.");
+            return reply;
+        }catch (Exception e){
+            reply.clear();
+            reply.put("type","promote");
+            reply.put("username",message.get("username"));
+            reply.put("msg",e.getMessage());
+            return reply;
+        }
+    }
+
+    public boolean checkPermission(HashMap<String, String> message) throws Exception {
+        st = c.prepareStatement("select permission from public.users where id=" + message.get("identifier") + ";");
+        rs = st.executeQuery();
+        if (rs.next() && rs.getBoolean(1)) {
+            return true;
+        }
+        return false;
     }
 }
