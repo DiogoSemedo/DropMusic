@@ -73,6 +73,9 @@ public class Database {
             case "insert notification":
                 reply = insertnotification(message);
                 break;
+            case "remove notification":
+                reply = removenotification(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;
@@ -179,7 +182,7 @@ public class Database {
                 return reply;
             }
             else if(message.get("select").equals("music")){
-                st = c.prepareStatement("select id,title,compositor,duration,genre from public.musics where idalbum=" + message.get("identifier") + ";");
+                st = c.prepareStatement("select id,title,compositor,duration,genre from public.musics where id=" + message.get("identifier") + ";");
                 rs = st.executeQuery();
                 if(rs.next()){
                     reply.put("Music:" + String.valueOf(rs.getInt(1)), "Title:" + rs.getString(2) + " Compositor:" + rs.getString(3) + " Duration:" + rs.getString(4) + " Genre:" + rs.getString(5));
@@ -249,7 +252,7 @@ public class Database {
             } else if (message.get("select").equals("album")) {
                 st = c.prepareStatement("select id,title from public.musics where idalbum=(select id from public.albums where title='" + message.get("text") + "');");
             } else {
-                st = c.prepareStatement("select id,title from public.musics where genre=" + message.get("text") + "';");
+                st = c.prepareStatement("select id,title from public.musics where genre='" + message.get("text") + "';");
             }
             rs = st.executeQuery();
             while (rs.next()) {
@@ -310,11 +313,11 @@ public class Database {
         try {
             if(checkPermission(message)){
                 if (message.get("select").equals("artist")) {
-                    st = c.prepareStatement("delete from public.artists where id=" + message.get("identifier") + ";");
+                    st = c.prepareStatement("delete from public.artists where id=" + message.get("id") + ";");
                 } else if (message.get("select").equals("album")) {
-                    st = c.prepareStatement("delete from public.albums where id=" + message.get("identifier") + ";");
+                    st = c.prepareStatement("delete from public.albums where id=" + message.get("id") + ";");
                 } else { //music
-                    st = c.prepareStatement("delete from public.musics where id=" + message.get("identifier") + ";");
+                    st = c.prepareStatement("delete from public.musics where id=" + message.get("id") + ";");
                 }
                 st.executeUpdate();
                 reply.put("type", "remove");
@@ -340,10 +343,10 @@ public class Database {
         try {
             if(checkPermission(message)) {
                 if(message.get("key").equals("idalbum") || message.get("key").equals("idartist")){
-                    st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "=" + message.get("value") + " where id=" + message.get("identifier") + ";");
+                    st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "=" + message.get("value") + " where id=" + message.get("id") + ";");
                 }
                 else {
-                    st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "='" + message.get("value") + "' where id=" + message.get("identifier") + ";");
+                    st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "='" + message.get("value") + "' where id=" + message.get("id") + ";");
                 }
                 st.executeUpdate();
                 reply.put("type", "edit");
@@ -414,9 +417,10 @@ public class Database {
     }
 
     public HashMap<String,String> insertnotification(HashMap<String,String> message){
+        // --> type|insert notification;msg|akjsfnfas;identifier|2
         HashMap<String,String> reply = new HashMap<String,String>();
         try{
-            st = c.prepareStatement("insert into public.notification (iduser,msg) values(?,?);");
+            st = c.prepareStatement("insert into public.notifications (iduser,msg) values(?,?);");
             st.setInt(1,Integer.parseInt(message.get("identifier")));
             st.setString(2,message.get("msg"));
             st.executeUpdate();
@@ -429,5 +433,26 @@ public class Database {
             return reply;
         }
     }
-    
+
+    public HashMap<String,String> removenotification(HashMap<String,String> message){
+        // --> type|remove notification;identifier|3
+        HashMap<String,String> reply = new HashMap<String,String>();
+        try{
+            st = c.prepareStatement("select msg from public.notifications where iduser="+message.get("identifier")+";");
+            rs = st.executeQuery();
+            String s = "Notification: ";
+            while(rs.next()){
+                s = s + rs.getString(1) + "\n";
+            }
+            st = c.prepareStatement("delete from public.notifications where iduser="+message.get("identifier")+";");
+            st.executeUpdate();
+            reply.put("type","remove notification");
+            reply.put("msg",s);
+            return reply;
+        }catch (Exception e){
+            reply.put("type","remove notification");
+            reply.put("msg",e.getMessage());
+            return reply;
+        }
+    }
 }

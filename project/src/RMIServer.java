@@ -173,7 +173,7 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                 reply.put("identifier",message.get("identifier"));
                 reply.put("msg","Promoted to editor.");
                 reply.put("type","insert notification");
-                request(message);
+                request(reply);
             }
             else {
                 c.print_on_client("Promoted to editor.");
@@ -317,6 +317,10 @@ public HashMap<String, String> request(HashMap<String, String> message) {
 
     public void addRef(String ClientID,RMIInterfaceClient client) throws RemoteException{
         references.put(ClientID, (RMIInterfaceClient) client);
+        HashMap<String,String> message = new HashMap<>();
+        message.put("type","remove notification");
+        message.put("identifier",ClientID);
+        message = request(message);
+        client.print_on_client(message.get("msg"));
     }
-
 }
