@@ -509,14 +509,23 @@ public class Database {
         return message;
     }
 
-    public byte[] upload(byte[] data,int id){
+    public boolean upload(byte[] data,int id){
         try{
             byte[] buffer = null;
             st = c.prepareStatement("insert into public.files (idmusic,datam) values(?,?);");
             st.setInt(1,id);
             st.setBytes(2,data);
             st.executeUpdate();
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
 
+    public byte[] download(int id){
+        try{
+            byte [] buffer = null;
             st = c.prepareStatement("select datam from public.files where idmusic="+String.valueOf(id)+";");
             rs = st.executeQuery();
             while(rs.next()){

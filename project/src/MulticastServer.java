@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.sql.SQLOutput;
 import java.util.HashMap;
 
 public class MulticastServer extends Thread {
@@ -54,9 +55,9 @@ public class MulticastServer extends Thread {
                     if(message.get("status").equals("upload")){
                         new Upload(replyM);
                     }
-                    else if(message.get("status").equals("download")){
+                    /*else if(message.get("status").equals("download")){
                         new Download(replyM);
-                    }
+                    }*/
                     System.out.println("\no que vou enviar");
                     for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
                         System.out.println(entry.getKey() + " : " + entry.getValue());
@@ -72,7 +73,6 @@ public class MulticastServer extends Thread {
                     replyM.clear();
                     byteOut.close();
                     out.close();
-
                 }
             }
         }catch (IOException e) {
@@ -91,42 +91,46 @@ public class MulticastServer extends Thread {
         ServerSocket listenSocket;
         HashMap<String,String> message;
         int id;
+        String status;
         public Upload(HashMap<String, String> message) {
             try {
                 this.message = message;
                 this.id = Integer.parseInt(message.get("idmusic"));
+                this.status = message.get("status");
                 int serverPort = Integer.parseInt(this.message.get("port"));
-
-                System.out.println(serverPort);
                 this.listenSocket = new ServerSocket(serverPort);
-
                 this.start();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
         public void run() {
             Socket clientSocket = null;
-            byte[] buf;
             try {
                 clientSocket = listenSocket.accept();
                 in = new DataInputStream(clientSocket.getInputStream());
                 out = new DataOutputStream(clientSocket.getOutputStream());
-                buffer = new byte[Integer.parseInt(in.readUTF())];
-                in.read(buffer);
-
-                if ((buf=db.upload(buffer, id))!=null) {
-                    out.writeUTF("upload com sucesso");
-                    //out.writeUTF(String.valueOf(buf.length));
-                    //out.write(buf);
+                if(status.equals("upload")) {
+                    buffer = new byte[Integer.parseInt(in.readUTF())];
+                    in.read(buffer);
+                    if (db.upload(buffer, id)) {
+                        out.writeUTF("upload com sucesso");
+                        //out.writeUTF(String.valueOf(buf.length));
+                        //out.write(buf);
+                    } else {
+                        out.writeUTF("upload falhado");
+                    }
                 }
-                else{
-                    out.writeUTF("upload falhado");
+                else {
+                   buffer = db.download(id);
+                   if(buffer!=null){
+                       out.writeUTF(String.valueOf(buffer.length));
+                       out.write(buffer);
+                   }else{
+                       System.out.println("ERRRRROOOOOOOOOOOOOOOOOO!");
+                   }
                 }
                 return;
-
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -142,7 +146,6 @@ public class MulticastServer extends Thread {
             }
         }
     }
-
     /*
     class Reply extends Thread {
         MulticastSocket socket = null;
