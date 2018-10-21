@@ -1,4 +1,8 @@
+import java.io.*;
 import java.net.MalformedURLException;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -22,6 +26,79 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         return new Scanner(System.in).nextLine();
     }
 
+    public static void TCPConnectionUp(String port,String id) {
+        Socket s = null;
+        DataOutputStream out = null;
+        DataInputStream in = null;
+        try {
+            Scanner read = new Scanner(System.in);
+            s = new Socket("localhost", 6000);
+            in = new DataInputStream(s.getInputStream());
+            out = new DataOutputStream(s.getOutputStream());
+
+            //System.out.println("Insert File path:");
+            byte[] array = Files.readAllBytes(new File("C:\\Users\\User\\Desktop\\euzinho.jpeg").toPath());
+            out.writeUTF(String.valueOf(array.length));
+            out.write(array);
+            System.out.println(in.readUTF() );
+            /*
+            //System.out.println(in.readUTF());
+            byte[] ar= new byte[Integer.parseInt(in.readUTF())];
+            in.read(ar);
+            Files.write(new File("C:\\Users\\User\\Desktop\\euzinho1.jpeg").toPath(), ar);
+            */
+        } catch (UnknownHostException e) {
+            System.out.println("Sock:" + e.getMessage());
+        } catch (EOFException e) {
+            System.out.println("EOF:" + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("IO:" + e.getMessage());
+        } finally {
+            if (s != null)
+                try {
+                    in.close();
+                    out.close();
+                    s.close();
+
+                } catch (IOException e) {
+                    System.out.println("close:" + e.getMessage());
+                }
+
+        }
+    }
+    public static void TCPConnectionDown(String port,String id) {
+        Socket s = null;
+        DataOutputStream out = null;
+        DataInputStream in = null;
+        try {
+            s = new Socket("localhost", 6000);
+            in = new DataInputStream(s.getInputStream());
+            out = new DataOutputStream(s.getOutputStream());
+
+            byte[] array = new byte[Integer.parseInt(in.readUTF())];
+            in.read(array);
+            Files.write(new File("C:\\Users\\User\\Desktop\\euzinho1.jpeg").toPath(), array);
+
+        } catch (UnknownHostException e) {
+            System.out.println("Sock:" + e.getMessage());
+        } catch (EOFException e) {
+            System.out.println("EOF:" + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("IO:" + e.getMessage());
+        } finally {
+            if (s != null)
+                try {
+                    in.close();
+                    out.close();
+                    s.close();
+
+                } catch (IOException e) {
+                    System.out.println("close:" + e.getMessage());
+                }
+
+        }
+    }
+
     public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
         RMIInterfaceServer rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
         System.out.println("Client ready...");
@@ -34,12 +111,12 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
             message.clear();
             if (!login) {
                 System.out.println("Menu: \n1 - Regist\n2 - Login");
-                switch (keyboardScanner.nextInt()) {
-                    case 1:
+                switch (keyboardScanner.nextLine()) {
+                    case "1":
                         message = rmi.regist((RMIInterfaceClient) c);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         break;
-                    case 2:
+                    case "2":
                         message = rmi.login((RMIInterfaceClient) c);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
 
@@ -55,7 +132,6 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         break;
 
                 }
-                keyboardScanner.nextLine();//limpa a buffershow
 
             } else if (login) {
 
@@ -146,7 +222,24 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("username",keyboardScanner.nextLine());
                         message = rmi.promote(message);
                         rmi.printMessage(message,(RMIInterfaceClient) c);
+                        break;
+                    case "upload":
+                        message.put("type","get port");
+                        System.out.println("Select ID of the music you want to upload");
+                        message.put("status","upload");
+                        message.put("idmusic",keyboardScanner.nextLine());
+                        message = rmi.request(message);
+                        TCPConnectionUp(message.get("port"), ClientID);
 
+                        break;
+                    case "downlaod":
+                        message.put("type","get port");
+                        message.put("status","download");
+                        message.put("idmusic",keyboardScanner.nextLine());
+                        message = rmi.request(message);
+                        TCPConnectionDown(message.get("port"), ClientID);
+
+                        break;
                     case "log out":
                         message.put("type","log out");
                         message.put("identifier",ClientID);

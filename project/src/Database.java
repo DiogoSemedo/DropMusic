@@ -28,7 +28,7 @@ public class Database {
     public Database() {
         try {
             Class.forName("org.postgresql.Driver");
-            this.c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database", "postgres", "zubiru");
+            this.c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database", "postgres", "surawyk");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -509,15 +509,23 @@ public class Database {
         return message;
     }
 
-    public boolean upload(byte[] data,HashMap<String,String> message){
+    public byte[] upload(byte[] data,int id){
         try{
+            byte[] buffer = null;
             st = c.prepareStatement("insert into public.files (idmusic,datam) values(?,?);");
-            st.setInt(1,Integer.parseInt(message.get("idmusic")));
+            st.setInt(1,id);
             st.setBytes(2,data);
             st.executeUpdate();
-            return true;
+
+            st = c.prepareStatement("select datam from public.files where idmusic="+String.valueOf(id)+";");
+            rs = st.executeQuery();
+            while(rs.next()){
+                buffer = rs.getBytes(1);
+            }
+            return buffer;
         }catch (Exception e){
-            return false;
+            e.printStackTrace();
+            return null;
         }
     }
 }

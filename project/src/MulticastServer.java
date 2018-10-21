@@ -51,8 +51,11 @@ public class MulticastServer extends Thread {
                     }
                     System.out.println("fim do que recebi");
                     replyM = db.process(message);
-                    if(replyM.get("type").equals("get port")){
+                    if(message.get("status").equals("upload")){
                         new Upload(replyM);
+                    }
+                    else if(message.get("status").equals("download")){
+                        new Download(replyM);
                     }
                     System.out.println("\no que vou enviar");
                     for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
@@ -77,7 +80,7 @@ public class MulticastServer extends Thread {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }finally
-         {
+        {
             socket.close();
         }
     }
@@ -85,15 +88,18 @@ public class MulticastServer extends Thread {
         DataInputStream in;
         DataOutput out;
         byte[] buffer;
+        ServerSocket listenSocket;
         HashMap<String,String> message;
+        int id;
         public Upload(HashMap<String, String> message) {
             try {
                 this.message = message;
-                int serverPort = Integer.parseInt(message.get("port"));
-                ServerSocket listenSocket = new ServerSocket(serverPort);
-                Socket clientSocket = listenSocket.accept();
-                in = new DataInputStream(clientSocket.getInputStream());
-                out = new DataOutputStream(clientSocket.getOutputStream());
+                this.id = Integer.parseInt(message.get("idmusic"));
+                int serverPort = Integer.parseInt(this.message.get("port"));
+
+                System.out.println(serverPort);
+                this.listenSocket = new ServerSocket(serverPort);
+
                 this.start();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -101,21 +107,38 @@ public class MulticastServer extends Thread {
         }
 
         public void run() {
+            Socket clientSocket = null;
+            byte[] buf;
             try {
-                while (true) {
-                    int lenght = in.read(buffer);
-                    if(lenght>0) {
-                        if (db.upload(buffer, message)) {
-                            out.writeUTF("upload com sucesso");
-                        }
-                        else{
-                            out.writeUTF("upload falhado");
-                        }
-                        return;
-                    }
+                clientSocket = listenSocket.accept();
+                in = new DataInputStream(clientSocket.getInputStream());
+                out = new DataOutputStream(clientSocket.getOutputStream());
+                buffer = new byte[Integer.parseInt(in.readUTF())];
+                in.read(buffer);
+
+                if ((buf=db.upload(buffer, id))!=null) {
+                    out.writeUTF("upload com sucesso");
+                    //out.writeUTF(String.valueOf(buf.length));
+                    //out.write(buf);
                 }
+                else{
+                    out.writeUTF("upload falhado");
+                }
+                return;
+
+
             } catch (IOException e) {
                 e.printStackTrace();
+            }
+            finally {
+                try{
+                    clientSocket.close();
+                    ((DataOutputStream) out).close();
+                    in.close();
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+
             }
         }
     }
@@ -132,7 +155,6 @@ public class MulticastServer extends Thread {
                 System.out.println("Exception");
             }
         }
-
         public void run(){
             try {
                 //criar a mensagem ou receber como atributo da thread
@@ -142,8 +164,6 @@ public class MulticastServer extends Thread {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group, PORT);
                 //testar funcao packet.setAddress
                 socket.send(packet);
-
-
             }
             catch (IOException e){
                 e.printStackTrace();
@@ -154,4 +174,3 @@ public class MulticastServer extends Thread {
         }
     }*/
 }
-

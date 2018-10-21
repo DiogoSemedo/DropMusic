@@ -39,57 +39,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         System.out.println("Server ready...");
     }
 
-    //methods
 
-/*
-    public HashMap<String, String> request(HashMap<String, String> message) {
-
-        try {
-            MulticastSocket sender = new MulticastSocket();  // create socket without binding it (only for receving)
-            MulticastSocket receiver = new MulticastSocket(PORT);
-            InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
-            receiver.joinGroup(group);
-
-            //converter message in bytes
-            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            ObjectOutputStream out = new ObjectOutputStream(byteOut);
-            ByteArrayInputStream byteIn;
-            ObjectInputStream in;
-            out.writeObject(message);
-            HashMap<String,String> replyM = new HashMap<>();
-            byte[] bufferS = byteOut.toByteArray();
-            //enviar
-            DatagramPacket packetS = new DatagramPacket(bufferS, bufferS.length, group, PORT);
-            sender.send(packetS);
-
-            //receber
-            byte[] bufferR = new byte[BUFFER_SIZE];
-            DatagramPacket packetR = new DatagramPacket(bufferR, bufferS.length);
-            do {
-
-                receiver.receive(packetR);
-                if(sender.getLocalPort() != packetR.getPort()) {
-                    //converter bytes para HashMap
-                    byteIn = new ByteArrayInputStream(packetR.getData());
-                    in = new ObjectInputStream(byteIn);
-
-                    try {
-                        System.out.println(packetR.getPort() + " " + packetR.getAddress());
-                        replyM = (HashMap<String, String>) in.readObject();
-                    } catch (ClassNotFoundException e) {
-                    e.printStackTrace();}
-                    byteIn.close();
-                    in.close();
-                }
-            } while (replyM.size()==0);
-            return replyM;
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }*/
 public HashMap<String, String> request(HashMap<String, String> message) {
     MulticastSocket receiver = null;
     MulticastSocket sender = null;
@@ -135,6 +85,7 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return map;
     }
 }
+
 
 
     public HashMap<String, String> regist(RMIInterfaceClient client) throws RemoteException {
