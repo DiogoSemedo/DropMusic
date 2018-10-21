@@ -65,15 +65,17 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         System.out.println("           show all");
                         System.out.println("         show details");
                         System.out.println("          write review");
+                        System.out.println("            log out");
                         System.out.println(" ---- Editor Permission ----");
                         System.out.println("           insert");
                         System.out.println("           remove");
                         System.out.println("            edit");
+                        System.out.println("            promote");
 
                         break;
                     case "search music":
                         message.put("type", "search music");
-                        message.put("select",rmi.select((RMIInterfaceClient) c));
+                        message.put("select",rmi.selectMusic((RMIInterfaceClient) c));
                         System.out.println("Search input:");
                         message.put("text", keyboardScanner.nextLine());
                         message = rmi.request(message);
@@ -91,7 +93,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                     case "show details":
                         message.put("type", "show details");
                         message.put("select", rmi.select( (RMIInterfaceClient) c));
-                        message.put("identifier", rmi.selectId( (RMIInterfaceClient) c));
+                        message.put("identifier", rmi.selectId( (RMIInterfaceClient) c, message.get("select")));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
@@ -107,14 +109,14 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("identifier",ClientID);
                         message.put("type", "remove");
                         message.put("select", rmi.select( (RMIInterfaceClient) c));
-                        message.put("id", rmi.selectId( (RMIInterfaceClient) c));
+                        message.put("id", rmi.selectId( (RMIInterfaceClient) c,message.get("select")));
                         message = rmi.request(message);
                         rmi.printMessage(message, (RMIInterfaceClient) c);
                         //done
                         break;
                     case "write review":
                         message.put("type", "write review");
-                        message.put("identifier", rmi.selectId((RMIInterfaceClient) c));
+                        message.put("identifier", rmi.selectId((RMIInterfaceClient) c,message.get("select")));
                         message.put("rate", rmi.rate( (RMIInterfaceClient) c));
                         message.put("text", rmi.review( (RMIInterfaceClient) c));
                         message = rmi.request(message);
@@ -128,7 +130,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("select",rmi.select((RMIInterfaceClient) c));
                         message.put("key",rmi.selectKey( (RMIInterfaceClient) c, message.get("select")));
                         message.put("value",rmi.selectValue((RMIInterfaceClient) c));
-                        message.put("id",rmi.selectId((RMIInterfaceClient) c));
+                        message.put("id",rmi.selectId((RMIInterfaceClient) c,message.get("select")));
                         HashMap<String,String> r = message;
                         message = rmi.request(message);
                         if(r.get("select").equals("album") && r.get("key").equals("description") && message.get("msg").equals("sucessful")){
@@ -144,6 +146,17 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("username",keyboardScanner.nextLine());
                         message = rmi.promote(message);
                         rmi.printMessage(message,(RMIInterfaceClient) c);
+
+                    case "log out":
+                        message.put("type","log out");
+                        message.put("identifier",ClientID);
+                        message = rmi.logOut(message);
+                        if(message.get("msg").equals("successful")){
+                            System.out.println("Log Out Done!");
+                            login = false;
+                            ClientID = null;
+                        }
+                        break;
                     default:
                         System.out.println("Wrong comand");
                         break;

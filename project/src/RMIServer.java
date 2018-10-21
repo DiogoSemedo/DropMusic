@@ -191,8 +191,8 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return read;
     }
 
-    public String selectId(RMIInterfaceClient client) throws RemoteException{
-        client.print_on_client("Select ID");
+    public String selectId(RMIInterfaceClient client, String value) throws RemoteException{
+        client.print_on_client("Select ID for "+value);
         return client.getInput();
     }
 
@@ -208,6 +208,25 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                     return "album";
                 case "3":
                     return "music";
+                default:
+                    client.print_on_client("Try again");
+                    break;
+            }
+        }
+    }
+
+    public String selectMusic(RMIInterfaceClient client) throws RemoteException {
+
+        while (true) {
+            client.print_on_client("Choose: 1-artist 2-album 3-genre");
+
+            switch (client.getInput()) {
+                case "1":
+                    return "artist";
+                case "2":
+                    return "album";
+                case "3":
+                    return "genre";
                 default:
                     client.print_on_client("Try again");
                     break;
@@ -345,5 +364,10 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                 request(reply);
             }
         }
+    }
+
+    public HashMap<String,String> logOut(HashMap<String,String> message) throws RemoteException{
+        references.remove(message.get("identifier"));
+        return request(message);
     }
 }

@@ -6,7 +6,7 @@ import java.util.HashMap;
 public interface RMIInterfaceServer extends Remote{
     public HashMap<String,String> regist(RMIInterfaceClient client) throws RemoteException;
     public HashMap<String,String> login(RMIInterfaceClient client) throws RemoteException;
-    public String selectId(RMIInterfaceClient client) throws RemoteException;
+    public String selectId(RMIInterfaceClient client, String value) throws RemoteException;
     public String select(RMIInterfaceClient client) throws RemoteException;
     public HashMap<String,String> insert(HashMap<String,String> message, RMIInterfaceClient client)throws RemoteException;
     public String rate(RMIInterfaceClient client) throws RemoteException;
@@ -18,5 +18,7 @@ public interface RMIInterfaceServer extends Remote{
     public void addRef(String ClientID,RMIInterfaceClient client) throws RemoteException;
     public HashMap<String,String> promote(HashMap<String,String> message) throws RemoteException;
     public void sendNotification(String select, String id) throws RemoteException;
+    public HashMap<String,String> logOut(HashMap<String,String> message) throws RemoteException;
+    public String selectMusic(RMIInterfaceClient client) throws RemoteException;
 
 }
