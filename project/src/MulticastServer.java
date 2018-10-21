@@ -1,7 +1,5 @@
 import java.io.*;
-import java.net.MulticastSocket;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
+import java.net.*;
 import java.util.HashMap;
 
 public class MulticastServer extends Thread {
@@ -53,6 +51,9 @@ public class MulticastServer extends Thread {
                     }
                     System.out.println("fim do que recebi");
                     replyM = db.process(message);
+                    if(replyM.get("type").equals("get port")){
+                        new Upload(replyM);
+                    }
                     System.out.println("\no que vou enviar");
                     for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
                         System.out.println(entry.getKey() + " : " + entry.getValue());
@@ -78,6 +79,44 @@ public class MulticastServer extends Thread {
         }finally
          {
             socket.close();
+        }
+    }
+    class Upload extends Thread {
+        DataInputStream in;
+        DataOutput out;
+        byte[] buffer;
+        HashMap<String,String> message;
+        public Upload(HashMap<String, String> message) {
+            try {
+                this.message = message;
+                int serverPort = Integer.parseInt(message.get("port"));
+                ServerSocket listenSocket = new ServerSocket(serverPort);
+                Socket clientSocket = listenSocket.accept();
+                in = new DataInputStream(clientSocket.getInputStream());
+                out = new DataOutputStream(clientSocket.getOutputStream());
+                this.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run() {
+            try {
+                while (true) {
+                    int lenght = in.read(buffer);
+                    if(lenght>0) {
+                        if (db.upload(buffer, message)) {
+                            out.writeUTF("upload com sucesso");
+                        }
+                        else{
+                            out.writeUTF("upload falhado");
+                        }
+                        return;
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

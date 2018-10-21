@@ -82,6 +82,9 @@ public class Database {
             case "log out":
                 reply = logout(message);
                 break;
+            case "get port":
+                reply = getport(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;
@@ -405,7 +408,6 @@ public class Database {
                 reply.put("type","promote");
                 reply.put("username",message.get("username"));
                 reply.put("msg","Não possui permissões para atribuir privilégio.");
-                return reply;
             }
             reply.put("type","promote");
             reply.put("username",message.get("username"));
@@ -499,6 +501,23 @@ public class Database {
             reply.put("type","log out");
             reply.put("msg",e.getMessage());
             return reply;
+        }
+    }
+
+    public HashMap<String,String> getport(HashMap<String,String> message){
+        message.put("port","6000");
+        return message;
+    }
+
+    public boolean upload(byte[] data,HashMap<String,String> message){
+        try{
+            st = c.prepareStatement("insert into public.files (idmusic,datam) values(?,?);");
+            st.setInt(1,Integer.parseInt(message.get("idmusic")));
+            st.setBytes(2,data);
+            st.executeUpdate();
+            return true;
+        }catch (Exception e){
+            return false;
         }
     }
 }
