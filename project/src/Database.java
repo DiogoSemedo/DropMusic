@@ -79,6 +79,9 @@ public class Database {
             case "get history":
                 reply = gethistory(message);
                 break;
+            case "log out":
+                reply = logout(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;
@@ -477,6 +480,22 @@ public class Database {
             return reply;
         }catch (Exception e){
             reply.put("type","get history");
+            reply.put("msg",e.getMessage());
+            return reply;
+        }
+    }
+
+    public HashMap<String,String> logout(HashMap<String,String> message){
+        // --> type|log out;identifier|2
+        HashMap<String,String> reply = new HashMap<String,String>();
+        try{
+            st = c.prepareStatement("update public.users set status=false where id="+message.get("identifier")+";");
+            st.executeUpdate();
+            reply.put("type","log out");
+            reply.put("msg","successful");
+            return reply;
+        }catch (Exception e){
+            reply.put("type","log out");
             reply.put("msg",e.getMessage());
             return reply;
         }
