@@ -173,7 +173,7 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                 reply.put("identifier",message.get("identifier"));
                 reply.put("msg","Promoted to editor.");
                 reply.put("type","insert notification");
-                request(message);
+                request(reply);
             }
             else {
                 c.print_on_client("Promoted to editor.");
@@ -208,25 +208,6 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                     return "album";
                 case "3":
                     return "music";
-                default:
-                    client.print_on_client("Try again");
-                    break;
-            }
-        }
-    }
-
-    public String selectMusic(RMIInterfaceClient client) throws RemoteException {
-
-        while (true) {
-            client.print_on_client("Choose: 1-artist 2-album 3-genre");
-
-            switch (client.getInput()) {
-                case "1":
-                    return "artist";
-                case "2":
-                    return "album";
-                case "3":
-                    return "genre";
                 default:
                     client.print_on_client("Try again");
                     break;
@@ -337,7 +318,7 @@ public HashMap<String, String> request(HashMap<String, String> message) {
     public void addRef(String ClientID,RMIInterfaceClient client) throws RemoteException{
         references.put(ClientID, (RMIInterfaceClient) client);
         HashMap<String,String> message = new HashMap<>();
-        message.put("type","get notification");
+        message.put("type","remove notification");
         message.put("identifier",ClientID);
         message = request(message);
         client.print_on_client(message.get("msg"));
@@ -353,7 +334,7 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         RMIInterfaceClient c;
         for (HashMap.Entry<String, String> entry : map.entrySet()) {
             if((c=references.get(entry.getKey()))!=null){
-              c.print_on_client("Description from "+select+" with "+id+" has been edited!");
+                c.print_on_client("Description from "+select+" with "+id+" has been edited!");
             }
             else{
                 //insert notification
@@ -361,21 +342,8 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                 reply.put("identifier",entry.getKey());
                 reply.put("msg","Description from "+select+" with "+id+" has been edited!");
                 reply.put("type","insert notification");
-
-            }
-
-            if((c=references.get(entry.getValue()))!=null){
-                c.print_on_client("Description from "+select+" with "+id+" has been edited!");
-            }
-            else{
-                //insert notification
-                HashMap<String,String> reply = new HashMap<String,String>();
-                reply.put("identifier",entry.getValue());
-                reply.put("msg","Description from "+select+" with "+id+" has been edited!");
-                reply.put("type","insert notification");
-
+                request(reply);
             }
         }
     }
-
 }

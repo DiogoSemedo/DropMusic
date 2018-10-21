@@ -76,6 +76,9 @@ public class Database {
             case "remove notification":
                 reply = removenotification(message);
                 break;
+            case "get history":
+                reply = gethistory(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;
@@ -349,6 +352,12 @@ public class Database {
                     st = c.prepareStatement("update public." + message.get("select") + "s set " + message.get("key") + "='" + message.get("value") + "' where id=" + message.get("id") + ";");
                 }
                 st.executeUpdate();
+                if(message.get("key").equals("description") && message.get("select").equals("album")){
+                    st = c.prepareStatement("insert into public.history (iduser,idalbum) values(?,?);");
+                    st.setInt(1,Integer.parseInt(message.get("identifier")));
+                    st.setInt(2,Integer.parseInt(message.get("id")));
+                    st.executeUpdate();
+                }
                 reply.put("type", "edit");
                 reply.put("select", message.get("select"));
                 reply.put("msg", "sucessful");
@@ -451,6 +460,23 @@ public class Database {
             return reply;
         }catch (Exception e){
             reply.put("type","remove notification");
+            reply.put("msg",e.getMessage());
+            return reply;
+        }
+    }
+
+    public HashMap<String,String> gethistory(HashMap<String,String> message){
+        // --> type|get history;idalbum|2
+        HashMap<String,String> reply = new HashMap<String,String>();
+        try{
+            st = c.prepareStatement("select iduser from public.history where idalbum="+message.get("idalbum")+";");
+            rs = st.executeQuery();
+            while(rs.next()){
+                reply.put(String.valueOf(rs.getInt(1)),String.valueOf(rs.getInt(1)));
+            }
+            return reply;
+        }catch (Exception e){
+            reply.put("type","get history");
             reply.put("msg",e.getMessage());
             return reply;
         }
