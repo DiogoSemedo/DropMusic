@@ -405,6 +405,7 @@ public class Database {
                 reply.put("type","promote");
                 reply.put("username",message.get("username"));
                 reply.put("msg","Não possui permissões para atribuir privilégio.");
+                return reply;
             }
             reply.put("type","promote");
             reply.put("username",message.get("username"));
