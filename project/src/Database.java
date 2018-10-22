@@ -288,10 +288,10 @@ public class Database {
                     st.setString(1, message.get("name"));
                     st.setString(2, message.get("description"));
                 } else if (message.get("select").equals("album")) {
-                    st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,?);");
+                    st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,dafault);");
                     st.setString(1, message.get("title"));
                     st.setString(2, message.get("description"));
-                    st.setDouble(3, Double.parseDouble(message.get("rate")));
+                    //st.setDouble(3, Double.parseDouble(message.get("rate")));
                 } else { //music
                     st = c.prepareStatement("insert into public.musics (id,title,compositor,duration,genre,idalbum,idartist) values(default,?,?,?,?,?,?);");
                     st.setString(1, message.get("title"));
@@ -508,8 +508,10 @@ public class Database {
     }
 
     public HashMap<String,String> getport(HashMap<String,String> message){
-        message.put("port","6000");
-        return message;
+        HashMap<String,String> replyM = new HashMap<>();
+        replyM.putAll(message);
+        replyM.put("port","6000");
+        return replyM;
     }
 
     public boolean upload(byte[] data,int idmusic,int iduser){
@@ -522,7 +524,7 @@ public class Database {
             st.executeUpdate();
             st = c.prepareStatement("insert into public.share (idmusic,iduser) values(?,?);");
             st.setInt(1,idmusic);
-            st.setInt(1,iduser);
+            st.setInt(2,iduser);
             st.executeUpdate();
             return true;
         }catch (Exception e){

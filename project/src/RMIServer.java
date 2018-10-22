@@ -202,8 +202,8 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                 message.put("title", client.getInput());
                 client.print_on_client("Description:");
                 message.put("description", client.getInput());
-                client.print_on_client("Rate:");
-                message.put("rate", client.getInput());
+                //client.print_on_client("Rate:");
+                //message.put("rate", client.getInput());
                 break;
             case "music":
                 client.print_on_client("Title:");

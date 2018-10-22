@@ -52,12 +52,11 @@ public class MulticastServer extends Thread {
                     }
                     System.out.println("fim do que recebi");
                     replyM = db.process(message);
-                    if(message.get("status").equals("upload") || message.get("status").equals("download")){
+                    if(message.get("type").equals("get port") && (message.get("status").equals("upload") || message.get("status").equals("download"))){
+
                         new Upload(replyM);
                     }
-                    /*else if(message.get("status").equals("download")){
-                        new Download(replyM);
-                    }*/
+
                     System.out.println("\no que vou enviar");
                     for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
                         System.out.println(entry.getKey() + " : " + entry.getValue());
@@ -101,7 +100,9 @@ public class MulticastServer extends Thread {
                 int serverPort = Integer.parseInt(this.message.get("port"));
                 this.listenSocket = new ServerSocket(serverPort);
                 this.start();
-            } catch (IOException e) {
+            } catch (BindException e){
+                System.out.println("listenScoket respeitar o parceiro");
+            } catch (IOException e){
                 e.printStackTrace();
             }
         }
@@ -114,7 +115,12 @@ public class MulticastServer extends Thread {
                 if(status.equals("upload")) {
                     iduser = Integer.parseInt(in.readUTF());
                     buffer = new byte[Integer.parseInt(in.readUTF())];
-                    in.read(buffer);
+                    int offset=0;
+                    int count;
+                    while((count=in.read(buffer,offset,buffer.length-offset))!=0){
+                        offset+=count;
+                    }
+                    System.out.println(offset);
                     if (db.upload(buffer, idmusic,iduser)) {
                         out.writeUTF("upload com sucesso");
                     } else {
@@ -128,6 +134,7 @@ public class MulticastServer extends Thread {
                        out.writeUTF(String.valueOf(buffer.length));
                        out.write(buffer);
                    }else{
+                       out.writeUTF("ERRO");
                        System.out.println("ERRRRROOOOOOOOOOOOOOOOOO!");
                    }
                 }
@@ -137,6 +144,7 @@ public class MulticastServer extends Thread {
             }
             finally {
                 try{
+                    this.listenSocket.close();
                     clientSocket.close();
                     ((DataOutputStream) out).close();
                     in.close();

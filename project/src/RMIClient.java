@@ -34,18 +34,30 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         Socket s = null;
         DataOutputStream out = null;
         DataInputStream in = null;
+        InputStream inputStream = null;
         try {
             Scanner read = new Scanner(System.in);
-            s = new Socket("localhost", 6000);
+            System.out.println(Integer.parseInt(port));
+            s = new Socket("localhost", Integer.parseInt(port));
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
 
+
             //System.out.println("Insert File path:");
-            byte[] array = Files.readAllBytes(new File("C:\\Users\\User\\Desktop\\series.txt").toPath());
+            String path ="C:\\Users\\User\\Desktop\\Kodaline.mp3";
+            inputStream = new BufferedInputStream(new FileInputStream(path));
+
+
+            byte[] buffer = new byte[1024 * 1024 * 10];
+            int size = inputStream.read(buffer);
+            //envia o ClientID
             out.writeUTF(id);
-            out.writeUTF(String.valueOf(array.length));
-            out.write(array);
-            System.out.println(in.readUTF() );
+            //envia o tamanho do ficheiro
+            out.writeUTF(String.valueOf(size));
+            //envia o ficheiro
+            out.write(buffer,0,size);
+            //recebe msg de success ou fail
+            System.out.println(in.readUTF());
             /*
             //System.out.println(in.readUTF());
             byte[] ar= new byte[Integer.parseInt(in.readUTF())];
@@ -59,10 +71,10 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         } catch (IOException e) {
             System.out.println("IO:" + e.getMessage());
         } finally {
-            if (s != null)
                 try {
                     in.close();
                     out.close();
+                    inputStream.close();
                     s.close();
 
                 } catch (IOException e) {
@@ -79,10 +91,25 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
             s = new Socket("localhost", Integer.parseInt(port));
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
+            //envia ClientID
             out.writeUTF(id);
-            byte[] array = new byte[Integer.parseInt(in.readUTF())];
-            in.read(array);
-            Files.write(new File("C:\\Users\\User\\Desktop\\teste.txt").toPath(), array);
+            //cria buffer com tamanho certo
+            String control;
+            //le o tamanho do ficheiro
+            if(!(control=in.readUTF()).equals("ERRO")){
+                byte[] array = new byte[Integer.parseInt(control)];
+                //lê o ficheiro
+                int offset=0;
+                int count;
+                while((count=in.read(array,offset,array.length-offset))!=0){
+                    offset+=count;
+                }
+                //recebe nome da musica
+                //String nome = in.readUTF();
+                OutputStream outputStream = new BufferedOutputStream(new FileOutputStream("C:\\Users\\User\\Desktop\\Kodaline1.mp3"));
+                outputStream.write(array);
+                outputStream.close();
+            }
 
         } catch (UnknownHostException e) {
             System.out.println("Sock:" + e.getMessage());
@@ -91,7 +118,6 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         } catch (IOException e) {
             System.out.println("IO:" + e.getMessage());
         } finally {
-            if (s != null)
                 try {
                     in.close();
                     out.close();
@@ -234,14 +260,17 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("status","upload");
                         message.put("idmusic",keyboardScanner.nextLine());
                         message = rmi.request(message);
+                        System.out.println(message.get("port"));
                         TCPConnectionUp(message.get("port"), ClientID);
 
                         break;
-                    case "downlaod":
+                    case "download":
                         message.put("type","get port");
                         message.put("status","download");
+                        System.out.println("Select id of music you want to download");
                         message.put("idmusic",keyboardScanner.nextLine());
                         message = rmi.request(message);
+                        System.out.println(message.get("port"));
                         TCPConnectionDown(message.get("port"), ClientID);
                         break;
 
