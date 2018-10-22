@@ -509,12 +509,17 @@ public class Database {
         return message;
     }
 
-    public boolean upload(byte[] data,int id){
+    public boolean upload(byte[] data,int idmusic,int iduser){
         try{
             byte[] buffer = null;
-            st = c.prepareStatement("insert into public.files (idmusic,datam) values(?,?);");
-            st.setInt(1,id);
+            st = c.prepareStatement("insert into public.files (idmusic,datam,iduser) values(?,?,?);");
+            st.setInt(1,idmusic);
             st.setBytes(2,data);
+            st.setInt(3,iduser);
+            st.executeUpdate();
+            st = c.prepareStatement("insert into public.share (idmusic,iduser) values(?,?);");
+            st.setInt(1,idmusic);
+            st.setInt(1,iduser);
             st.executeUpdate();
             return true;
         }catch (Exception e){
@@ -523,18 +528,48 @@ public class Database {
         }
     }
 
-    public byte[] download(int id){
+    public byte[] download(int idmusic,int iduser){
         try{
             byte [] buffer = null;
-            st = c.prepareStatement("select datam from public.files where idmusic="+String.valueOf(id)+";");
+            st = c.prepareStatement("select exists(select * from public.share where idmusic="+String.valueOf(idmusic)+" and iduser="+String.valueOf(iduser)+");");
             rs = st.executeQuery();
-            while(rs.next()){
-                buffer = rs.getBytes(1);
+            if(rs.next() && rs.getBoolean(1)) {
+                st = c.prepareStatement("select datam from public.files where idmusic=" + String.valueOf(idmusic) + ";");
+                rs = st.executeQuery();
+                while (rs.next()) {
+                    buffer = rs.getBytes(1);
+                }
+                return buffer;
             }
-            return buffer;
+            return null;
         }catch (Exception e){
             e.printStackTrace();
             return null;
+        }
+    }
+
+    public HashMap<String,String> share(HashMap<String,String> message){
+        HashMap<String,String> reply = new HashMap<String,String>();
+        try{
+            st = c.prepareStatement("select exists (select * from public.files where idmusic="+message.get("idmusic")+" and iduser="+message.get("identifier")+");");
+            rs = st.executeQuery();
+            if(rs.next() && rs.getBoolean(1)){
+                st = c.prepareStatement("insert into public.share (idmusic,iduser) values(?,?);");
+                st.setInt(1,Integer.parseInt(message.get("idmusic")));
+                st.setInt(2,Integer.parseInt(message.get("iduser")));
+                st.executeUpdate();
+                reply.put("type","share");
+                reply.put("msg","successful");
+            }
+            else{
+                reply.put("type","share");
+                reply.put("msg","You're trying to share a music who don't belong to you");
+            }
+            return reply;
+        }catch (Exception e){
+            reply.put("type","share");
+            reply.put("msg",e.getMessage());
+            return reply;
         }
     }
 }

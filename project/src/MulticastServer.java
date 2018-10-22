@@ -90,12 +90,13 @@ public class MulticastServer extends Thread {
         byte[] buffer;
         ServerSocket listenSocket;
         HashMap<String,String> message;
-        int id;
+        int idmusic;
+        int iduser;
         String status;
         public Upload(HashMap<String, String> message) {
             try {
                 this.message = message;
-                this.id = Integer.parseInt(message.get("idmusic"));
+                this.idmusic = Integer.parseInt(message.get("idmusic"));
                 this.status = message.get("status");
                 int serverPort = Integer.parseInt(this.message.get("port"));
                 this.listenSocket = new ServerSocket(serverPort);
@@ -111,9 +112,10 @@ public class MulticastServer extends Thread {
                 in = new DataInputStream(clientSocket.getInputStream());
                 out = new DataOutputStream(clientSocket.getOutputStream());
                 if(status.equals("upload")) {
+                    iduser = Integer.parseInt(in.readUTF());
                     buffer = new byte[Integer.parseInt(in.readUTF())];
                     in.read(buffer);
-                    if (db.upload(buffer, id)) {
+                    if (db.upload(buffer, idmusic,iduser)) {
                         out.writeUTF("upload com sucesso");
                         //out.writeUTF(String.valueOf(buf.length));
                         //out.write(buf);
@@ -122,7 +124,8 @@ public class MulticastServer extends Thread {
                     }
                 }
                 else {
-                   buffer = db.download(id);
+                   iduser =  Integer.parseInt(in.readUTF());
+                   buffer = db.download(idmusic,iduser);
                    if(buffer!=null){
                        out.writeUTF(String.valueOf(buffer.length));
                        out.write(buffer);
