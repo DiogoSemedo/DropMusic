@@ -85,6 +85,9 @@ public class Database {
             case "get port":
                 reply = getport(message);
                 break;
+            case "share":
+                reply = share(message);
+                break;
             default:
                 System.out.println("Error on process function");
                 break;

@@ -52,7 +52,7 @@ public class MulticastServer extends Thread {
                     }
                     System.out.println("fim do que recebi");
                     replyM = db.process(message);
-                    if(message.get("status").equals("upload")){
+                    if(message.get("status").equals("upload") || message.get("status").equals("download")){
                         new Upload(replyM);
                     }
                     /*else if(message.get("status").equals("download")){
@@ -117,8 +117,6 @@ public class MulticastServer extends Thread {
                     in.read(buffer);
                     if (db.upload(buffer, idmusic,iduser)) {
                         out.writeUTF("upload com sucesso");
-                        //out.writeUTF(String.valueOf(buf.length));
-                        //out.write(buf);
                     } else {
                         out.writeUTF("upload falhado");
                     }
