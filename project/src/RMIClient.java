@@ -26,6 +26,10 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         return new Scanner(System.in).nextLine();
     }
 
+    public static void Download(String port, String id){
+
+    }
+
     public static void TCPConnectionUp(String port,String id) {
         Socket s = null;
         DataOutputStream out = null;
@@ -37,7 +41,8 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
             out = new DataOutputStream(s.getOutputStream());
 
             //System.out.println("Insert File path:");
-            byte[] array = Files.readAllBytes(new File("C:\\Users\\User\\Desktop\\euzinho.jpeg").toPath());
+            byte[] array = Files.readAllBytes(new File("C:\\Users\\User\\Desktop\\series.txt").toPath());
+            out.writeUTF(id);
             out.writeUTF(String.valueOf(array.length));
             out.write(array);
             System.out.println(in.readUTF() );
@@ -71,13 +76,13 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         DataOutputStream out = null;
         DataInputStream in = null;
         try {
-            s = new Socket("localhost", 6000);
+            s = new Socket("localhost", Integer.parseInt(port));
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
-
+            out.writeUTF(id);
             byte[] array = new byte[Integer.parseInt(in.readUTF())];
             in.read(array);
-            Files.write(new File("C:\\Users\\User\\Desktop\\euzinho1.jpeg").toPath(), array);
+            Files.write(new File("C:\\Users\\User\\Desktop\\teste.txt").toPath(), array);
 
         } catch (UnknownHostException e) {
             System.out.println("Sock:" + e.getMessage());
@@ -238,7 +243,17 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                         message.put("idmusic",keyboardScanner.nextLine());
                         message = rmi.request(message);
                         TCPConnectionDown(message.get("port"), ClientID);
+                        break;
 
+                    case"share":
+                        message.put("type", "share");
+                        message.put("identifier", ClientID);
+                        System.out.println("Select id of user you want to share with");
+                        message.put("iduser", keyboardScanner.nextLine());
+                        System.out.println("Select id from which music you want to share");
+                        message.put("idmusic", keyboardScanner.nextLine());
+                        message = rmi.request(message);
+                        rmi.printMessage(message, (RMIInterfaceClient) c);
                         break;
                     case "log out":
                         message.put("type","log out");
