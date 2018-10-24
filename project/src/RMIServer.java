@@ -1,12 +1,9 @@
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.MulticastSocket;
-import java.rmi.AlreadyBoundException;
-import java.rmi.Naming;
-import java.rmi.RemoteException;
+import java.net.*;
+import java.rmi.*;
+import java.rmi.ConnectException;
 import java.rmi.registry.LocateRegistry;
+import java.rmi.server.ExportException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,75 +14,140 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private int PORT = 4321;
     private String MULTICAST_ADDRESS_2 = "224.0.224.1";
-    private HashMap<String,RMIInterfaceClient> references = new HashMap<String,RMIInterfaceClient>();
+    private HashMap<String, RMIInterfaceClient> references = new HashMap<String, RMIInterfaceClient>();
+    public static RMIInterfaceServer connection;
     public RMIServer() throws RemoteException {
         super();
     }
 
     public static void main(String[] args) throws RemoteException, MalformedURLException, InterruptedException {
         RMIInterfaceServer rmi = new RMIServer();
-        /*while(true) {
+        connection = null;
+        try {//Só o primário entra aqui
+
+            LocateRegistry.createRegistry(1099);
+        }catch (ExportException e){
+            System.out.println("Falhei a criar registro para ser principal");
+        }
+        //os sleeps aqui não afetam a comunicão entre rmiServer e rmiClient
+        while(true) {
             try {
-                Naming.bind("dropmusic", rmi);
-
+                //tentar ser principal----------------------------------------------
+                Naming.bind("//0.0.0.0:1099/dropmusic", rmi);
                 System.out.println("Server ready...");
-                return;
+                //testar o secundário
+                while(true) {
+                    Thread.sleep(5000);
+                    try {
+                        connection = (RMIInterfaceServer) Naming.lookup("//0.0.0.0:2000/servers");
+                    } catch (NotBoundException e) {
+
+                    }catch (ConnectException e){
+                        System.out.println("Testar Secundário: fail (isn't running)");
+                    }
+                    if(connection!= null){
+                        try{
+                            if (connection.callPrimaryToSecondary()){
+                                System.out.println("Secundário ON");
+
+                            }
+                        }catch (Exception i){//só para ignorar
+                            }
+                    }
+                }
             } catch (AlreadyBoundException e) {
-                System.out.println("sou secundário");
-                Thread.sleep(1000);
+                //fica secundário--------------------------------------------------
+                System.out.println("sou secundário...");
+                try {//cria registro para o principal poder testar o secundário
+                    LocateRegistry.createRegistry(2000);
+                    Naming.rebind("//0.0.0.0:2000/servers",rmi);
+                } catch (Exception i){}
+                Thread.sleep(30000); //Secundario testa substituir o primario se o primario estiver em baixo
+            }catch (ConnectException e){
+                //o principal vai abaixo e o sencundário assume ser principal apartir daqui
+                LocateRegistry.createRegistry(1099);
+                Naming.rebind("//0.0.0.0:2000/servers",rmi);
+                Naming.rebind("//0.0.0.0:1099/dropmusic", rmi);
+                System.out.println("O servidor principal foi abaixo, assumi o trabalho como principal");
+                //tratamento do secundario como principal para o secundario
+                while(true) {
+                    Thread.sleep(5000);
+                    try {
+                        connection = (RMIInterfaceServer) Naming.lookup("//0.0.0.0:2000/servers");
+                    } catch (NotBoundException i) {
+
+                    }catch (ConnectException i){
+                        System.out.println("Testar Secundário: fail (isn't running)");
+                    }
+                    if(connection!= null){
+                        try{
+                            if (connection.callPrimaryToSecondary()){
+                                System.out.println("Secundário ON");
+                            }
+                        }catch (Exception i){//só para ignorar
+                        }
+                    }
+                }
             }
-        }*/
-        LocateRegistry.createRegistry(1099).rebind("dropmusic",rmi);
-        System.out.println("Server ready...");
-    }
-
-
-public HashMap<String, String> request(HashMap<String, String> message) {
-    MulticastSocket receiver = null;
-    MulticastSocket sender = null;
-    HashMap<String, String> map = new HashMap<>();
-    try {
-        sender = new MulticastSocket();  // create socket without binding it (only for receving)
-        receiver = new MulticastSocket(PORT);
-        InetAddress groupS = InetAddress.getByName(MULTICAST_ADDRESS);
-        InetAddress groupR = InetAddress.getByName(MULTICAST_ADDRESS_2);
-        //converter message in bytes
-        ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(byteOut);
-        out.writeObject(message);
-        byte[] bufferS = byteOut.toByteArray();
-        //envia pacote
-        DatagramPacket packetS = new DatagramPacket(bufferS, bufferS.length, groupS, PORT);
-        sender.send(packetS);
-        receiver.joinGroup(groupR);
-
-        out.close();
-        byteOut.close();
-        message.clear();
-        //Receber
-        ByteArrayInputStream byteIn;
-        ObjectInputStream in;
-        byte[] bufferR = new byte[BUFFER_SIZE];
-        DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
-
-        receiver.receive(packetR);
-        byteIn = new ByteArrayInputStream(packetR.getData());
-        in = new ObjectInputStream(byteIn);
-        try {
-            map = (HashMap<String, String>) in.readObject();
-        } catch (ClassNotFoundException e) {
-            System.out.println(e.getException());
         }
 
-    } catch (IOException e) {
-        e.printStackTrace();
-    } finally {
-        receiver.close();
-        sender.close();
-        return map;
     }
-}
 
+    //O server chama sobre o secundário
+    public boolean callPrimaryToSecondary(){
+        return true;
+    }
+
+    public void updateReferences(HashMap<String,RMIInterfaceClient> refs){
+        references = refs;
+    }
+
+
+    public HashMap<String, String> request(HashMap<String, String> message) {
+        MulticastSocket receiver = null;
+        MulticastSocket sender = null;
+        HashMap<String, String> map = new HashMap<>();
+        try {
+            sender = new MulticastSocket();  // create socket without binding it (only for receving)
+            receiver = new MulticastSocket(PORT);
+            InetAddress groupS = InetAddress.getByName(MULTICAST_ADDRESS);
+            InetAddress groupR = InetAddress.getByName(MULTICAST_ADDRESS_2);
+            //converter message in bytes
+            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+            ObjectOutputStream out = new ObjectOutputStream(byteOut);
+            out.writeObject(message);
+            byte[] bufferS = byteOut.toByteArray();
+            //envia pacote
+            DatagramPacket packetS = new DatagramPacket(bufferS, bufferS.length, groupS, PORT);
+            sender.send(packetS);
+            receiver.joinGroup(groupR);
+
+            out.close();
+            byteOut.close();
+            message.clear();
+            //Receber
+            ByteArrayInputStream byteIn;
+            ObjectInputStream in;
+            byte[] bufferR = new byte[BUFFER_SIZE];
+            DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
+
+            receiver.receive(packetR);
+            byteIn = new ByteArrayInputStream(packetR.getData());
+            in = new ObjectInputStream(byteIn);
+            try {
+                map = (HashMap<String, String>) in.readObject();
+            } catch (ClassNotFoundException e) {
+                System.out.println(e.getException());
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            receiver.close();
+            sender.close();
+            return map;
+        }
+    }
 
 
     public HashMap<String, String> regist(RMIInterfaceClient client) throws RemoteException {
@@ -115,25 +177,24 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return message;
     }
 
-    public HashMap<String,String> promote(HashMap<String,String> message) throws RemoteException{
+    public HashMap<String, String> promote(HashMap<String, String> message) throws RemoteException {
         message = request(message);
-        if(message.get("msg").equals("successful")) {
+        if (message.get("msg").equals("successful")) {
             RMIInterfaceClient c = (RMIInterfaceClient) references.get(message.get("identifier"));
-            if(c==null){
-                HashMap<String,String> reply = new HashMap<String,String>();
-                reply.put("identifier",message.get("identifier"));
-                reply.put("msg","Promoted to editor.");
-                reply.put("type","insert notification");
+            if (c == null) {
+                HashMap<String, String> reply = new HashMap<String, String>();
+                reply.put("identifier", message.get("identifier"));
+                reply.put("msg", "Promoted to editor.");
+                reply.put("type", "insert notification");
                 request(reply);
-            }
-            else {
+            } else {
                 c.print_on_client("Promoted to editor.");
             }
         }
         return message;
     }
 
-    public String review(RMIInterfaceClient client) throws RemoteException{
+    public String review(RMIInterfaceClient client) throws RemoteException {
         client.print_on_client("Write your review:");
         String read;
         while ((read = client.getInput()).length() > 300) {
@@ -142,8 +203,8 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return read;
     }
 
-    public String selectId(RMIInterfaceClient client, String value) throws RemoteException{
-        client.print_on_client("Select ID for "+value);
+    public String selectId(RMIInterfaceClient client, String value) throws RemoteException {
+        client.print_on_client("Select ID for " + value);
         return client.getInput();
     }
 
@@ -185,7 +246,7 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         }
     }
 
-    public HashMap<String, String> insert(HashMap<String, String> message, RMIInterfaceClient client) throws RemoteException{
+    public HashMap<String, String> insert(HashMap<String, String> message, RMIInterfaceClient client) throws RemoteException {
         message.put("type", "insert");
         String select = select(client);
         message.put("select", select);
@@ -215,16 +276,16 @@ public HashMap<String, String> request(HashMap<String, String> message) {
                 client.print_on_client("Genre:");
                 message.put("genre", client.getInput());
                 client.print_on_client("Artist Id:");
-                message.put("idartist",client.getInput());
+                message.put("idartist", client.getInput());
                 client.print_on_client("Album Id:");
-                message.put("idalbum",client.getInput());
+                message.put("idalbum", client.getInput());
                 break;
         }
         return message;
 
     }
 
-    public String rate(RMIInterfaceClient client) throws  RemoteException{
+    public String rate(RMIInterfaceClient client) throws RemoteException {
 
         client.print_on_client("Rate between 0 - 10:");
         return client.getInput();
@@ -237,31 +298,31 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         }
     }
 
-    public String selectKey(RMIInterfaceClient client, String select) throws RemoteException{
-        switch (select){
+    public String selectKey(RMIInterfaceClient client, String select) throws RemoteException {
+        switch (select) {
 
-            case"artist":
+            case "artist":
                 client.print_on_client("Choose what you want do edit:\n1 - Name\n2 - Description");
-                switch (client.getInput()){
-                    case"1":
+                switch (client.getInput()) {
+                    case "1":
                         return "title";
                     case "2":
                         return "description";
                 }
                 break;
-            case"album":
+            case "album":
                 client.print_on_client("Choose what you want to edit:\n1 - Title\n2 - Description");
-                switch (client.getInput()){
-                    case"1":
+                switch (client.getInput()) {
+                    case "1":
                         return "title";
                     case "2":
                         return "description";
                 }
                 break;
-            case"music":
+            case "music":
                 client.print_on_client("Choose what you want to edit:\n1 - Title\n2 - Compositor\n3 - Duration\n4 - Genre\n5 - Id Album\n6 - Id Artist");
-                switch (client.getInput()){
-                    case"1":
+                switch (client.getInput()) {
+                    case "1":
                         return "title";
                     case "2":
                         return "compositor";
@@ -280,45 +341,54 @@ public HashMap<String, String> request(HashMap<String, String> message) {
         return "Wrong Input";
     }
 
-    public String selectValue(RMIInterfaceClient client) throws RemoteException{
+    public String selectValue(RMIInterfaceClient client) throws RemoteException {
         client.print_on_client("Input the new value:");
         return client.getInput();
     }
-
-    public void addRef(String ClientID,RMIInterfaceClient client) throws RemoteException{
+    //put references
+    public void addRef(String ClientID, RMIInterfaceClient client) throws RemoteException {
         references.put(ClientID, (RMIInterfaceClient) client);
-        HashMap<String,String> message = new HashMap<>();
-        message.put("type","remove notification");
-        message.put("identifier",ClientID);
+        try{
+            connection.updateReferences(references);
+        }catch (Exception e){
+            //só ignorar
+        }
+        HashMap<String, String> message = new HashMap<>();
+        message.put("type", "remove notification");
+        message.put("identifier", ClientID);
         message = request(message);
         client.print_on_client(message.get("msg"));
     }
 
-    public void sendNotification(String select, String id) throws RemoteException{
+    public void sendNotification(String select, String id) throws RemoteException {
         //method para receber os id's aos quais tem de mandar notificaçoes
-        HashMap<String,String> map = new HashMap<>();
-        map.put("type","get history");
-        map.put("select",select);
-        map.put("idalbum",id);
+        HashMap<String, String> map = new HashMap<>();
+        map.put("type", "get history");
+        map.put("select", select);
+        map.put("idalbum", id);
         map = request(map);
         RMIInterfaceClient c;
         for (HashMap.Entry<String, String> entry : map.entrySet()) {
-            if((c=references.get(entry.getKey()))!=null){
-                c.print_on_client("Description from "+select+" with "+id+" has been edited!");
-            }
-            else{
+            if ((c = references.get(entry.getKey())) != null) {
+                c.print_on_client("Description from " + select + " with " + id + " has been edited!");
+            } else {
                 //insert notification
-                HashMap<String,String> reply = new HashMap<String,String>();
-                reply.put("identifier",entry.getKey());
-                reply.put("msg","Description from "+select+" with "+id+" has been edited!");
-                reply.put("type","insert notification");
+                HashMap<String, String> reply = new HashMap<String, String>();
+                reply.put("identifier", entry.getKey());
+                reply.put("msg", "Description from " + select + " with " + id + " has been edited!");
+                reply.put("type", "insert notification");
                 request(reply);
             }
         }
     }
-
-    public HashMap<String,String> logOut(HashMap<String,String> message) throws RemoteException{
+    //
+    public HashMap<String, String> logOut(HashMap<String, String> message) throws RemoteException {
         references.remove(message.get("identifier"));
+        try{
+            connection.updateReferences(references);
+        }catch (Exception e){
+            //só ignorar
+        }
         return request(message);
     }
 }

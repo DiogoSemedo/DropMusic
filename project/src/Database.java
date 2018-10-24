@@ -9,33 +9,89 @@ import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 
 public class Database {
-    public class User {
-        private String username;
-        private String password;
-        private boolean permissao; //false-normal true-editor
-
-        public User(String username, String password, boolean permissao) {
-            this.username = username;
-            this.password = password;
-            this.permissao = permissao;
-        }
-    }
-
     private Connection c;
     private PreparedStatement st;
     private ResultSet rs;
+    private Statement cs;
 
-    public Database() {
+    public Database(String num) {
         try {
             Class.forName("org.postgresql.Driver");
-            this.c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/DropMusic.Database", "postgres", "surawyk");
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/", "postgres", "surawyk");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
-
+        try{
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic"+num, "postgres", "surawyk");
+        }catch (SQLException e){
+            try{
+                cs = c.createStatement();
+                cs.executeUpdate("create database dropmusic"+num);
+                c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic"+num, "postgres", "surawyk");
+                cs = c.createStatement();
+                cs.executeUpdate("create table public.users" +
+                        "(" +
+                        "    id serial primary key," +
+                        "    name character varying not null," +
+                        "    password character varying not null," +
+                        "    permission boolean not null," +
+                        "    status boolean not null default false" +
+                        ");");
+                cs.executeUpdate("create table public.artists" +
+                        "(" +
+                        "    id serial primary key," +
+                        "    title character varying NOT NULL," +
+                        "    description character varying NOT NULL" +
+                        ");");
+                cs.executeUpdate("CREATE TABLE public.albums" +
+                        "(" +
+                        "    id serial primary key," +
+                        "    title character varying NOT NULL," +
+                        "    description character varying NOT NULL," +
+                        "    rate double precision NOT NULL DEFAULT 0.0" +
+                        ");");
+                cs.executeUpdate("CREATE TABLE public.musics" +
+                        "(" +
+                        "    id serial primary key," +
+                        "    title character varying NOT NULL," +
+                        "    compositor character varying NOT NULL," +
+                        "    duration character varying NOT NULL," +
+                        "    genre character varying NOT NULL," +
+                        "    idalbum serial constraint fk_idalbum_musics references public.albums(id) on delete cascade," +
+                        "    idartist serial constraint fk_idartist_musics references public.artists(id) on delete cascade" +
+                        ");");
+                cs.executeUpdate("CREATE TABLE public.reviews" +
+                        "(" +
+                        "    id serial primary key," +
+                        "    text character varying(300) not null," +
+                        "idalbum serial constraint fk_idalbum_reviews references public.albums(id) on delete cascade" +
+                        ")");
+                cs.executeUpdate("CREATE TABLE public.notifications" +
+                        "(" +
+                        "iduser serial constraint fk_iduser_notifications references public.users(id) on delete cascade," +
+                        "    msg character varying not null " +
+                        ");");
+                cs.executeUpdate("CREATE TABLE public.history" +
+                        "(" +
+                        "iduser serial constraint fk_iduser_history references public.users(id) on delete cascade," +
+                        "    idalbum serial constraint fk_idalbum_history references public.albums(id) on delete cascade" +
+                        ");");
+                cs.executeUpdate("CREATE TABLE public.files" +
+                        "(" +
+                        "    idmusic serial primary key constraint fk_idmusic_files references public.musics(id) on delete cascade," +
+                        "    datam bytea not null," +
+                        "    iduser serial constraint fk_iduser_files references public.users(id) on delete cascade" +
+                        ") ;");
+                cs.executeUpdate("CREATE TABLE public.share" +
+                        "(" +
+                        "    idmusic integer constraint fk_idmusic_share references public.files(idmusic) on delete cascade," +
+                        "    iduser integer constraint fk_iduser_share references public.users(id) on delete cascade" +
+                        ") ;");
+            }catch (Exception e1){
+                System.out.println(e.getMessage());
+            }
+        }
     }
-
-    private ArrayList<User> users = new ArrayList<>();
 
     public HashMap<String, String> process(HashMap<String, String> message) {
         HashMap<String, String> reply = new HashMap<String, String>();

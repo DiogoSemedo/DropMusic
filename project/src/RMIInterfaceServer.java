@@ -20,5 +20,8 @@ public interface RMIInterfaceServer extends Remote{
     public void sendNotification(String select, String id) throws RemoteException;
     public HashMap<String,String> logOut(HashMap<String,String> message) throws RemoteException;
     public String selectMusic(RMIInterfaceClient client) throws RemoteException;
+    //Só o servidor primário chama esta funções
+    public boolean callPrimaryToSecondary() throws RemoteException;
+    public void updateReferences(HashMap<String,RMIInterfaceClient> refs) throws RemoteException;
 
 }

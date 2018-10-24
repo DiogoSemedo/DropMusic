@@ -8,14 +8,20 @@ public class MulticastServer extends Thread {
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private String MULTICAST_ADDRESS_2 = "224.0.224.1";
     private int PORT = 4321;
-    private Database db = new Database();
+    private Database db;
+
     public static void main(String[] args) {
-        MulticastServer server = new MulticastServer();
+        if(args.length!=1){
+            System.out.println("Input invalid. Format:java MulticastServer <num>");
+            System.exit(-1);
+        }
+        MulticastServer server = new MulticastServer(args[0]);
         server.start();
 
     }
-    public MulticastServer() {
+    public MulticastServer(String num) {
         super("Server " + (long) (Math.random() * 1000));
+        db = new Database(num);
     }
 
     public void run() {
@@ -62,13 +68,14 @@ public class MulticastServer extends Thread {
                         System.out.println(entry.getKey() + " : " + entry.getValue());
                     }
                     System.out.println("fim do que vou enviar");
-                    message.clear();
+
                     out.writeObject(replyM);
                     byte[] replyBuffer = byteOut.toByteArray();
                     DatagramPacket packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupR, PORT);
                     //testar funcao packet.setAddress
                     //socket.setTimeToLive(100);
                     reply.send(packetReply);
+                    message.clear();
                     replyM.clear();
                     byteOut.close();
                     out.close();
