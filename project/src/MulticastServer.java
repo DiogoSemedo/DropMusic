@@ -7,9 +7,10 @@ public class MulticastServer extends Thread {
     private int BUFFER_SIZE = 2048;
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private String MULTICAST_ADDRESS_2 = "224.0.224.1";
+    private String MULTICAST_ADDRESS_3 ="224.0.224.2";
     private int PORT = 4321;
     private Database db;
-
+    private HashMap<String ,HashMap<String,String>> allrequest;
     public static void main(String[] args) {
         if(args.length!=1){
             System.out.println("Input invalid. Format:java MulticastServer <num>");
@@ -22,6 +23,7 @@ public class MulticastServer extends Thread {
     public MulticastServer(String num) {
         super("Server " + (long) (Math.random() * 1000));
         db = new Database(num);
+        allrequest = new HashMap<>();
     }
 
     public void run() {
@@ -34,11 +36,12 @@ public class MulticastServer extends Thread {
             reply = new MulticastSocket();
             InetAddress group = InetAddress.getByName(MULTICAST_ADDRESS);
             InetAddress groupR = InetAddress.getByName(MULTICAST_ADDRESS_2);
+            InetAddress groupS = InetAddress.getByName(MULTICAST_ADDRESS_3);
             socket.joinGroup(group);
             ByteArrayInputStream byteIn;
             ObjectInputStream in;
-            HashMap<String,String> message;
-            HashMap<String,String> replyM = new HashMap<>();
+            HashMap<String, String> message;
+            HashMap<String, String> replyM = new HashMap<>();
 
             while (true) {
                 ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
@@ -46,47 +49,54 @@ public class MulticastServer extends Thread {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet);//espera até receber
-                if(reply.getLocalPort() != packet.getPort()) {
-                    System.out.println("Recebi: " + packet.getAddress().getHostAddress() + ":" + packet.getPort());
 
-                    byteIn = new ByteArrayInputStream(packet.getData());
-                    in = new ObjectInputStream(byteIn);
-                    message = (HashMap<String,String>) in.readObject();
-                    System.out.println("\no que recebi");
-                    for (HashMap.Entry<String, String> entry : message.entrySet()) {
-                        System.out.println(entry.getKey() + " : " + entry.getValue());
+
+                byteIn = new ByteArrayInputStream(packet.getData());
+                in = new ObjectInputStream(byteIn);
+                message = (HashMap<String, String>) in.readObject();
+
+                DatagramPacket packetReply = null;
+                if (message.get("default").equals("false")) {
+                    if(!allrequest.containsKey(message.get("requestID"))){
+                        replyM = db.process(message);
+                        allrequest.put(message.get("requestID"),replyM);
+                        if(message.get("MulticastPort").equals(String.valueOf(reply.getLocalPort()))) {
+                            if (message.get("type").equals("get port") && (message.get("status").equals("upload") || message.get("status").equals("download"))) {
+                                new Upload(replyM);
+                            }
+                            out.writeObject(replyM);
+                            byte[] replyBuffer = byteOut.toByteArray();
+                            packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupR, PORT);
+                            reply.send(packetReply);
+                        }
                     }
-                    System.out.println("fim do que recebi");
-                    replyM = db.process(message);
-                    if(message.get("type").equals("get port") && (message.get("status").equals("upload") || message.get("status").equals("download"))){
-
-                        new Upload(replyM);
+                    else{
+                        replyM = allrequest.get(message.get("requestID"));
+                        out.writeObject(replyM);
+                        byte[] replyBuffer = byteOut.toByteArray();
+                        packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupR, PORT);
+                        reply.send(packetReply);
                     }
-
-                    System.out.println("\no que vou enviar");
-                    for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
-                        System.out.println(entry.getKey() + " : " + entry.getValue());
-                    }
-                    System.out.println("fim do que vou enviar");
-
-                    out.writeObject(replyM);
-                    byte[] replyBuffer = byteOut.toByteArray();
-                    DatagramPacket packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupR, PORT);
-                    //testar funcao packet.setAddress
-                    //socket.setTimeToLive(100);
+                } else if (message.get("default").equals("true")) {
+                    String pacote = "nada";
+                    byte[] replyBuffer = pacote.getBytes();
+                    packetReply = new DatagramPacket(replyBuffer, replyBuffer.length, groupS, PORT);
                     reply.send(packetReply);
-                    message.clear();
-                    replyM.clear();
-                    byteOut.close();
-                    out.close();
                 }
+                //testar funcao packet.setAddress
+                //socket.setTimeToLive(100);
+                //reply.send(packetReply);
+                message.clear();
+                replyM.clear();
+                byteOut.close();
+                out.close();
+                //}
             }
-        }catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-        }finally
-        {
+        } finally {
             socket.close();
         }
     }

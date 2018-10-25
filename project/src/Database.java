@@ -17,17 +17,17 @@ public class Database {
     public Database(String num) {
         try {
             Class.forName("org.postgresql.Driver");
-            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/", "postgres", "surawyk");
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/", "postgres", "zubiru");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
         try{
-            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic"+num, "postgres", "surawyk");
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic"+num, "postgres", "zubiru");
         }catch (SQLException e){
             try{
                 cs = c.createStatement();
                 cs.executeUpdate("create database dropmusic"+num);
-                c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic"+num, "postgres", "surawyk");
+                c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic"+num, "postgres", "zubiru");
                 cs = c.createStatement();
                 cs.executeUpdate("create table public.users" +
                         "(" +

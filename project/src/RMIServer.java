@@ -9,15 +9,101 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
+class Server{
+    private String port;
+    private boolean replied;
+    private int numberfails;
+
+    public Server(String port, boolean replied) {
+        this.port = port;
+        this.replied = replied;
+        this.numberfails=0;
+    }
+
+    public String getPort() {
+        return port;
+    }
+
+    public boolean isReplied() {
+        return replied;
+    }
+
+    public void setReplied(boolean replied) {
+        this.replied = replied;
+    }
+
+    public boolean fail(){
+        this.numberfails++;
+        if(this.numberfails<5)
+            return false;
+        return true;
+    }
+}
+
+class ServerList{
+    private ArrayList<Server> servers;
+
+    public ServerList() {
+        this.servers = new ArrayList<>();
+    }
+
+    public boolean exists(String port){ //verificar se o servidor multicast já existe
+        for(int i=0;i<this.servers.size();i++){
+            if(this.servers.get(i).getPort().equals(port))
+                return true;
+        }
+        return false;
+    }
+
+    public void insert(String port){
+        if(!exists(port)){ //se o servidor multicast nao existir é adicionado á lista de servidores
+            Server server = new Server(port,false);
+            this.servers.add(server);
+        }
+    }
+
+    public void reset(){
+        for(int i=0;i<this.servers.size();i++){
+            this.servers.get(i).setReplied(false);
+        }
+    }
+
+    public String balance(){
+        String port = "";
+        for(int i=0;i<this.servers.size();i++){
+            if(!this.servers.get(i).isReplied()){
+                port = this.servers.get(i).getPort();
+                break;
+            }
+        }
+        if(this.servers.size()>0 && port.equals("")){
+            reset();
+            port = balance();
+        }
+        return port;
+    }
+
+    public void reboot(){
+        this.servers.clear();
+    }
+}
+
 public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer {
     private int BUFFER_SIZE = 2048;
     private String MULTICAST_ADDRESS = "224.0.224.0";
     private int PORT = 4321;
     private String MULTICAST_ADDRESS_2 = "224.0.224.1";
+    private String MULTICAST_ADDRESS_3 = "224.0.224.2";
     private HashMap<String, RMIInterfaceClient> references = new HashMap<String, RMIInterfaceClient>();
     public static RMIInterfaceServer connection;
+    public static ServerList servers;
+    public CheckMulticast test;
+    private int requestID;
     public RMIServer() throws RemoteException {
         super();
+        servers = new ServerList();
+        test = new CheckMulticast();
+        requestID=0;
     }
 
     public static void main(String[] args) throws RemoteException, MalformedURLException, InterruptedException {
@@ -112,39 +198,59 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             receiver = new MulticastSocket(PORT);
             InetAddress groupS = InetAddress.getByName(MULTICAST_ADDRESS);
             InetAddress groupR = InetAddress.getByName(MULTICAST_ADDRESS_2);
-            //converter message in bytes
-            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            ObjectOutputStream out = new ObjectOutputStream(byteOut);
-            out.writeObject(message);
-            byte[] bufferS = byteOut.toByteArray();
-            //envia pacote
-            DatagramPacket packetS = new DatagramPacket(bufferS, bufferS.length, groupS, PORT);
-            sender.send(packetS);
+            message.put("requestID", String.valueOf(requestID));
+            message.put("default", "false");
+            String serverID = servers.balance();
+            message.put("MulticastPort", serverID);
             receiver.joinGroup(groupR);
+            //converter message in bytes
+            boolean state = true;
+            int i;
+            for ( i = 0; i <6 && state; ) {
+                ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+                ObjectOutputStream out = new ObjectOutputStream(byteOut);
+                out.writeObject(message);
+                byte[] bufferS = byteOut.toByteArray();
+                //envia pacote
+                DatagramPacket packetS = new DatagramPacket(bufferS, bufferS.length, groupS, PORT);
+                sender.send(packetS);
 
-            out.close();
-            byteOut.close();
-            message.clear();
-            //Receber
-            ByteArrayInputStream byteIn;
-            ObjectInputStream in;
-            byte[] bufferR = new byte[BUFFER_SIZE];
-            DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
+                out.close();
+                byteOut.close();
 
-            receiver.receive(packetR);
-            byteIn = new ByteArrayInputStream(packetR.getData());
-            in = new ObjectInputStream(byteIn);
-            try {
-                map = (HashMap<String, String>) in.readObject();
-            } catch (ClassNotFoundException e) {
-                System.out.println(e.getException());
+                //Receber
+                ByteArrayInputStream byteIn;
+                ObjectInputStream in;
+                byte[] bufferR = new byte[BUFFER_SIZE];
+                DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
+                try {
+                    receiver.setSoTimeout(2000);
+                    receiver.receive(packetR);
+                    byteIn = new ByteArrayInputStream(packetR.getData());
+                    in = new ObjectInputStream(byteIn);
+                    try {
+                        map = (HashMap<String, String>) in.readObject();
+                    } catch (ClassNotFoundException e) {
+                        System.out.println(e.getException());
+                    }
+                    state = false;
+                } catch (SocketTimeoutException t) {
+                    i++;
+                    state = true;
+                    serverID = servers.balance();
+                    message.put("MulticastPort", serverID);
+                }
             }
-
+            if(i==6){
+                servers.reboot();
+                map.put("msg","MulticastServers Down");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             receiver.close();
             sender.close();
+            requestID++;
             return map;
         }
     }
@@ -390,5 +496,69 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             //só ignorar
         }
         return request(message);
+    }
+
+    class CheckMulticast extends Thread{
+        MulticastSocket receiver=null;
+        MulticastSocket sender=null;
+        InetAddress groupM = null;
+        InetAddress groupS = null;
+        ByteArrayInputStream byteIn;
+        ObjectInputStream in;
+        HashMap<String,String> message;
+        DatagramPacket packetS;
+        public CheckMulticast(){
+            try{
+                receiver = new MulticastSocket(PORT);
+                sender = new MulticastSocket();
+                groupM = InetAddress.getByName(MULTICAST_ADDRESS_3);
+                groupS = InetAddress.getByName(MULTICAST_ADDRESS);
+                receiver.joinGroup(groupM);
+                message = new HashMap<String,String>();
+                ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+                ObjectOutputStream out = new ObjectOutputStream(byteOut);
+                message.put("default", "true");
+                out.writeObject(message);
+                byte[] bufferS = byteOut.toByteArray();
+                packetS = new DatagramPacket(bufferS, bufferS.length, groupS, PORT);
+                out.close();
+                byteOut.close();
+                message.clear();
+                this.start();
+            }catch (IOException e){
+
+            }
+        }
+
+        public void run() {
+            try {
+                while (true) {
+                    //envia pacote
+                    sender.send(packetS);
+                    //Receber
+                    ByteArrayInputStream byteIn;
+                    ObjectInputStream in;
+                    byte[] bufferR = new byte[BUFFER_SIZE];
+                    DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
+                    try {
+                        while (true) {
+                            receiver.setSoTimeout(1000);
+                            receiver.receive(packetR);
+                            servers.insert(String.valueOf(packetR.getPort()));
+                        }
+                    } catch (SocketTimeoutException t) {
+                        Thread.sleep(5000);
+                    }
+                }
+            }catch (IOException e){
+                e.printStackTrace();
+            }catch (InterruptedException e2){
+                e2.printStackTrace();
+            }
+            finally {
+                sender.close();
+                receiver.close();
+            }
+        }
     }
 }
