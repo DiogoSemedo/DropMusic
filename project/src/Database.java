@@ -11,20 +11,20 @@ public class Database {
     private ResultSet rs;
     private Statement cs;
 
-    public Database(String num) {
+    public Database(String num,String pw) {
         try {
             Class.forName("org.postgresql.Driver");
-            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/", "postgres", "zubiru");
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/", "postgres", pw);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
         try {
-            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic" + num, "postgres", "zubiru");
+            c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic" + num, "postgres", pw);
         } catch (SQLException e) {
             try {
                 cs = c.createStatement();
                 cs.executeUpdate("create database dropmusic" + num);
-                c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic" + num, "postgres", "zubiru");
+                c = DriverManager.getConnection("jdbc:postgresql://localhost:5432/dropmusic" + num, "postgres", pw);
                 cs = c.createStatement();
                 cs.executeUpdate("create table public.users" +
                         "(" +
