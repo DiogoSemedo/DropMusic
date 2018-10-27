@@ -2,6 +2,10 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 
+
+/**
+ * Servidor de multicast que recebe pacotes udp do RMIServer, envia a informação a ser processada para a base de dados e envia pacotes udp para o RMIServer.
+ */
 public class MulticastServer extends Thread {
     private int BUFFER_SIZE = 2048;
     private String MULTICAST_ADDRESS = "224.0.224.0"; //para receber requests
@@ -10,7 +14,12 @@ public class MulticastServer extends Thread {
     private int PORT = 4321;
     private Database db;
     private HashMap<String, HashMap<String, String>> allrequest;
+    private String iddb;
 
+    /**
+     * Método para executar a thread.
+     * @param args args[0] Identificar da base de dados args[1] password da base de dados
+     */
     public static void main(String[] args) {
         if (args.length != 2) {
             System.out.println("Input invalid. Format:java MulticastServer <num> <dbpassword>");
@@ -20,16 +29,26 @@ public class MulticastServer extends Thread {
         server.start();
     }
 
+    /**
+     * Construtor do MulticastServer.
+     * @param num Identificador da base de dados
+     * @param pw Password da base dados
+     */
     public MulticastServer(String num,String pw) {
         super("Server " + (long) (Math.random() * 1000));
+        iddb = num;
         db = new Database(num,pw);
         allrequest = new HashMap<>();
     }
 
+    /**
+     * Thread
+     */
     public void run() {
         MulticastSocket socket = null;
         MulticastSocket reply = null;
         System.out.println(this.getName() + " running...");
+
         try {
             socket = new MulticastSocket(PORT);
             reply = new MulticastSocket();
@@ -58,18 +77,21 @@ public class MulticastServer extends Thread {
                     if (!allrequest.containsKey(message.get("requestID"))) { //verifica o pedido já foi feito alguma vez
                         replyM = db.process(message);
 
-
-                        //teste
                         System.out.println("RESPOSTA " + message.get("requestID"));
                         for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
                             System.out.println(entry.getKey() + " : " + entry.getValue());
                         }
                         System.out.println("FIM DE RESPOSTA\n");
-                        //teste
-                        allrequest.put(message.get("requestID"), replyM);
+
+                        allrequest.put(message.get("requestID"), (HashMap<String,String>) replyM.clone());
+                        if(message.get("type").equals("get port") && message.get("status").equals("download") && replyM.get("iddb").equals(iddb)){
+                            message.put("MulticastPort", String.valueOf(reply.getLocalPort()));
+                        }
                         if (message.get("MulticastPort").equals(String.valueOf(reply.getLocalPort()))) { //verifica se vai responder ou só processar
-                            if (message.get("type").equals("get port") && (message.get("status").equals("upload") || message.get("status").equals("download"))) {
+                            if (message.get("type").equals("get port")) {
                                 new TCP(replyM); //cria thread para ligação tcp
+                                System.out.println(Inet4Address.getLocalHost().getHostAddress());
+                                replyM.put("ip", Inet4Address.getLocalHost().getHostAddress());
                             }
                             out.writeObject(replyM);
                             byte[] replyBuffer = byteOut.toByteArray();
@@ -103,6 +125,9 @@ public class MulticastServer extends Thread {
         }
     }
 
+    /**
+     *
+     */
     class TCP extends Thread {
         DataInputStream in;
         DataOutput out;
@@ -112,12 +137,17 @@ public class MulticastServer extends Thread {
         int idmusic;
         int iduser;
         String status;
-
+        String ext;
+        /**
+         *
+         * @param message
+         */
         public TCP(HashMap<String, String> message) {
             try {
                 this.message = message;
                 this.idmusic = Integer.parseInt(message.get("idmusic"));
                 this.status = message.get("status");
+                this.ext = message.get("ext");
                 int serverPort = Integer.parseInt(this.message.get("port"));
                 this.listenSocket = new ServerSocket(serverPort);
                 this.start();
@@ -128,6 +158,9 @@ public class MulticastServer extends Thread {
             }
         }
 
+        /**
+         *
+         */
         public void run() {
             Socket clientSocket = null;
             try {
@@ -143,7 +176,7 @@ public class MulticastServer extends Thread {
                         offset += count;
                     }
                     System.out.println(offset);
-                    if (db.upload(buffer, idmusic, iduser)) {
+                    if (db.upload(buffer, idmusic, iduser,iddb,ext)) {
                         out.writeUTF("upload com sucesso");
                     } else {
                         out.writeUTF("upload falhado");

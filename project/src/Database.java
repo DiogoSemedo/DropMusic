@@ -5,12 +5,20 @@ import java.sql.*;
 import java.sql.ResultSet;
 import java.util.HashMap;
 
+/**
+ * Classe para fazer todas as operações sobre a base de dados.
+ */
 public class Database {
     private Connection c;
     private PreparedStatement st;
     private ResultSet rs;
     private Statement cs;
 
+    /**
+     * Construtor da classe Database, conecta à base de dados. Cria uma base de dados se esta não existir se já existir liga-se.
+     * @param num Identificador da base de dados (nome)
+     * @param pw Password de acesso ao pgadmin do Postgres
+     */
     public Database(String num,String pw) {
         try {
             Class.forName("org.postgresql.Driver");
@@ -77,7 +85,9 @@ public class Database {
                         "(" +
                         "    idmusic serial primary key constraint fk_idmusic_files references public.musics(id) on delete cascade," +
                         "    datam bytea not null," +
-                        "    iduser serial constraint fk_iduser_files references public.users(id) on delete cascade" +
+                        "    iduser serial constraint fk_iduser_files references public.users(id) on delete cascade," +
+                        "    iddb character varying not null,"+
+                        "    ext character varying not null"+
                         ") ;");
                 cs.executeUpdate("CREATE TABLE public.share" +
                         "(" +
@@ -90,6 +100,11 @@ public class Database {
         }
     }
 
+    /**
+     * Método que verifica o type do protocolo udp, e executa a correspondente função.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> process(HashMap<String, String> message) {
         HashMap<String, String> reply = new HashMap<String, String>();
         switch (message.get("type")) {
@@ -148,6 +163,11 @@ public class Database {
         return reply;
     }
 
+    /**
+     * Método para registar utilizador utilizador na base de dados.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> regist(HashMap<String, String> message) {
         HashMap<String, String> reply = new HashMap<String, String>();
         //exemplo --> type|regist;username|name;password|pass
@@ -183,6 +203,11 @@ public class Database {
         }
     }
 
+    /**
+     * Método para dar login do utilizador na base de dados.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> login(HashMap<String, String> message) {
         //exemplo --> type|regist;username|name;password|pass;
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -213,6 +238,11 @@ public class Database {
         }
     }
 
+    /**
+     * Método para listar artistas, albúns ou músicas (sem detalhe).
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> showall(HashMap<String, String> message) {
         //exemplo --> type|show all;select|(artist,album,music)
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -230,6 +260,11 @@ public class Database {
         }
     }
 
+    /**
+     * Método para listar artistas, albúns ou músicas (com detalhe).
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> showdetails(HashMap<String, String> message) {
         //exemplo --> type|show details;select|(artist,album,music);identifier|(1,5,19)
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -282,7 +317,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para inserir uma review de um albúm.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> writereview(HashMap<String, String> message) {
         //exemplo --> type|write review;identifier|idalbum;rate|4.5;text|asdkjasdkasjkd
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -303,7 +342,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para procurar música por género, nome do albúm ou nome do artista.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> searchmusic(HashMap<String, String> message) {
         //exemplo --> type|search music;select|(artist,album,music);text|asdasd
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -326,7 +369,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para inserir artistas,albúns ou músicas.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> insert(HashMap<String, String> message) {
         //exemplo -->type|insert;select|(artist,album,music);key|value;identifier|2
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -337,7 +384,7 @@ public class Database {
                     st.setString(1, message.get("name"));
                     st.setString(2, message.get("description"));
                 } else if (message.get("select").equals("album")) {
-                    st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,dafault);");
+                    st = c.prepareStatement("insert into public.albums(id,title,description,rate) values(default,?,?,default);");
                     st.setString(1, message.get("title"));
                     st.setString(2, message.get("description"));
                 } else { //music
@@ -366,7 +413,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para remover artistas,albúns ou músicas.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> remove(HashMap<String, String> message) {
         // exemplo --> type|remove;select|artist,album,music;identifier|1
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -396,7 +447,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para editar informação dos artistas,albúns ou músicas.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> edit(HashMap<String, String> message) {
         //exemplo --> type|edit;select|artist,album,music;identifier|2;key|description;value|bananas sao boas
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -430,7 +485,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para atribuir privilégio de editor a um utilizador.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> promote(HashMap<String, String> message) {
         // type|promote;identifier|1;username|"Claudio"
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -472,6 +531,12 @@ public class Database {
         }
     }
 
+    /**
+     * Método para verificar se um dado utilizador possui privilégio de editor.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     * @throws Exception É tratada nos métodos que usam este método.
+     */
     public boolean checkPermission(HashMap<String, String> message) throws Exception {
         st = c.prepareStatement("select permission from public.users where id=" + message.get("identifier") + ";");
         rs = st.executeQuery();
@@ -480,7 +545,11 @@ public class Database {
         }
         return false;
     }
-
+    /**
+     * Método para guardar notificações quando o utilizador não se encontra online.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> insertnotification(HashMap<String, String> message) {
         // --> type|insert notification;msg|akjsfnfas;identifier|2
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -498,7 +567,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para devolver todas as notificações de utilizador que acabe de dar login.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> removenotification(HashMap<String, String> message) {
         // --> type|remove notification;identifier|3
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -520,7 +593,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para devolver todos os utilizadores que já alteraram a descrição de um certo albúm.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> gethistory(HashMap<String, String> message) {
         // --> type|get history;idalbum|2
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -537,7 +614,11 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método para dar logout do utilizador da base de dados.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> logout(HashMap<String, String> message) {
         // --> type|log out;identifier|2
         HashMap<String, String> reply = new HashMap<String, String>();
@@ -553,21 +634,49 @@ public class Database {
             return reply;
         }
     }
-
+    /**
+     * Método que devolve o porto para a ligação de tcp e, no caso de download a base de dados onde a música de encontra.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> getport(HashMap<String, String> message) {
         HashMap<String, String> replyM = new HashMap<>();
         replyM.putAll(message);
         replyM.put("port", "6000");
-        return replyM;
+        try {
+            if (message.get("status").equals("download")) {
+                st = c.prepareStatement("select title,iddb,ext from public.musics, public.files where public.files.idmusic=" + message.get("idmusic") + " and public.musics.id=" + message.get("idmusic") + ";");
+                rs = st.executeQuery();
+                if(rs.next()){
+                    replyM.put("title",rs.getString(1)+"."+rs.getString(3));
+                    replyM.put("iddb", rs.getString(2));
+                }
+            }
+            return replyM;
+        }catch (Exception e){
+            replyM.put("msg",e.getMessage());
+            return replyM;
+        }
     }
 
-    public boolean upload(byte[] data, int idmusic, int iduser) {
+    /**
+     * Método para inserir um ficheiro de música na base de dados.
+     * @param data Dados binários da música.
+     * @param idmusic Id correspondente à música existente na tabela de músicas.
+     * @param iduser Utilizador que carregou a música.
+     * @param iddb Identificar da base de dados.
+     * @param ext Extensão da música
+     * @return true se não apanhar nenhum excepção.
+     */
+    public boolean upload(byte[] data, int idmusic, int iduser,String iddb,String ext) {
         try {
             byte[] buffer = null;
-            st = c.prepareStatement("insert into public.files (idmusic,datam,iduser) values(?,?,?);");
+            st = c.prepareStatement("insert into public.files (idmusic,datam,iduser,iddb,ext) values(?,?,?,?,?);");
             st.setInt(1, idmusic);
             st.setBytes(2, data);
             st.setInt(3, iduser);
+            st.setString(4, iddb);
+            st.setString(5, ext);
             st.executeUpdate();
             st = c.prepareStatement("insert into public.share (idmusic,iduser) values(?,?);");
             st.setInt(1, idmusic);
@@ -580,10 +689,16 @@ public class Database {
         }
     }
 
+    /**
+     * Método para ir buscar um ficheiro de música à base de dados.
+     * @param idmusic Identificar da música no ficheiro.
+     * @param iduser Utilizador que pretende efetuar o download.
+     * @return Os dados da música o ficheiro tiver sido partilhado com o utilizador ou null se não tiver, ou não existir.
+     */
     public byte[] download(int idmusic, int iduser) {
         try {
             byte[] buffer = null;
-            st = c.prepareStatement("select exists(select * from public.share where idmusic=" + String.valueOf(idmusic) + " and iduser=" + String.valueOf(iduser) + ");");
+            st = c.prepareStatement("select exists(select * from public.share where idmusic=" + String.valueOf(idmusic) + " and iduser=" + String.valueOf(iduser) +");");
             rs = st.executeQuery();
             if (rs.next() && rs.getBoolean(1)) {
                 st = c.prepareStatement("select datam from public.files where idmusic=" + String.valueOf(idmusic) + ";");
@@ -599,7 +714,11 @@ public class Database {
             return null;
         }
     }
-
+    /**
+     * Método para partilhar o ficheiro de música com vários utilizadores.
+     * @param message Mensagem a processar
+     * @return Resposta após processamento
+     */
     public HashMap<String, String> share(HashMap<String, String> message) {
         HashMap<String, String> reply = new HashMap<String, String>();
         try {
