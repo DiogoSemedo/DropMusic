@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-class Server{
+class Server implements Serializable{
     private String port;
     private boolean replied;
 
@@ -31,7 +31,7 @@ class Server{
     }
 }
 
-class ServerList{
+class ServerList implements Serializable{
     private ArrayList<Server> servers;
 
     public ServerList() {
@@ -92,11 +92,11 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
     private int PORT = 4321;
     private String MULTICAST_ADDRESS_2 = "224.0.224.1";
     private String MULTICAST_ADDRESS_3 = "224.0.224.2";
-    private HashMap<String, RMIInterfaceClient> references = new HashMap<String, RMIInterfaceClient>();
+    private static HashMap<String, RMIInterfaceClient> references = new HashMap<String, RMIInterfaceClient>();
     public static RMIInterfaceServer connection;
-    public ServerList servers;
+    public static ServerList servers;
     public CheckMulticast test;
-    private int requestID;
+    private static int requestID;
     public RMIServer() throws RemoteException {
         super();
         servers = new ServerList();
@@ -155,11 +155,13 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             }catch (ConnectException e){
                 //o principal vai abaixo e o sencundário assume ser principal apartir daqui
                 LocateRegistry.createRegistry(1099);
-                Naming.rebind("//0.0.0.0:1099/dropmusic", rmi);
                 System.out.println("O servidor principal foi abaixo, assumi o trabalho como principal");
                 try{Naming.unbind("//0.0.0.0:2000/servers");}
-                catch (NotBoundException a){}//ingore
+                catch (NotBoundException a){
+                    System.out.println("Nao consegui dar unbinds");
+                }
                 catch (ConnectException a){}
+                Naming.rebind("//0.0.0.0:1099/dropmusic",rmi); //torna-se principal
                 //tratamento do secundario como principal para o secundario
                 while(true) {
                     Thread.sleep(5000);
@@ -169,6 +171,13 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
                             try{
                                 if (connection.callPrimaryToSecondary()){
                                     System.out.println("Secundário ON");
+                                    try{
+                                        connection.updateServersInfo(servers);
+                                        connection.updateReferences(references);
+                                        connection.updateRequestcounter(requestID);
+                                    }catch (NullPointerException a){
+                                        System.out.println("Fail do Update");
+                                    }
                                 }
                             }catch (Exception i){//só para ignorar
                                 System.out.println("Testar Secundário: fail (isn't running)");
@@ -200,8 +209,16 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         references = refs;
     }
 
+    public void updateServersInfo(ServerList a){
+        servers = a;
+    }
 
-    public HashMap<String, String> request(HashMap<String, String> message) {
+    public void updateRequestcounter(int id){
+        requestID = id;
+    }
+
+
+    public HashMap<String, String> request(HashMap<String, String> message) throws RemoteException {
         MulticastSocket receiver = null;
         MulticastSocket sender = null;
         HashMap<String, String> map = new HashMap<>();
@@ -214,6 +231,10 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             message.put("default", "false");
             servers.printAll();
             String serverID = servers.balance();
+            try {
+                connection.updateServersInfo(servers);
+            }catch (NullPointerException a){}
+
             message.put("MulticastPort", serverID);
             receiver.joinGroup(groupR);
             //converter message in bytes
@@ -237,7 +258,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
                 byte[] bufferR = new byte[BUFFER_SIZE];
                 DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
                 try {
-                    receiver.setSoTimeout(2000);
+                    receiver.setSoTimeout(10000);
                     receiver.receive(packetR);
                     byteIn = new ByteArrayInputStream(packetR.getData());
                     in = new ObjectInputStream(byteIn);
@@ -251,6 +272,8 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
                     i++;
                     state = true;
                     serverID = servers.balance();
+                    try{connection.updateServersInfo(servers);}
+                    catch (NullPointerException a){}
                     message.put("MulticastPort", serverID);
                 }
             }
@@ -264,6 +287,8 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             receiver.close();
             sender.close();
             requestID++;
+            try{ connection.updateRequestcounter(requestID);}
+            catch (NullPointerException a){}
             return map;
         }
     }
@@ -555,7 +580,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
                     DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
                     try {
                         while (true) {
-                            receiver.setSoTimeout(1000);
+                            receiver.setSoTimeout(2000);
                             receiver.receive(packetR);
                             servers.insert(String.valueOf(packetR.getPort()));
                         }

@@ -23,5 +23,7 @@ public interface RMIInterfaceServer extends Remote{
     //Só o servidor primário chama esta funções
     public boolean callPrimaryToSecondary() throws RemoteException;
     public void updateReferences(HashMap<String,RMIInterfaceClient> refs) throws RemoteException;
+    public void updateRequestcounter(int id) throws RemoteException;
+    public void updateServersInfo(ServerList a) throws RemoteException;
 
 }

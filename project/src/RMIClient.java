@@ -28,22 +28,17 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
     }
 
 
-    public static void TCPConnectionUp(String port,String id) {
+    public static void TCPConnectionUp(String port,String id, FileInputStream file) {
         Socket s = null;
         DataOutputStream out = null;
         DataInputStream in = null;
         InputStream inputStream = null;
         try {
-            Scanner read = new Scanner(System.in);
-            System.out.println(Integer.parseInt(port));
             s = new Socket("localhost", Integer.parseInt(port));
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
 
-
-            //System.out.println("Insert File path:");
-            String path ="C:\\Users\\User\\Desktop\\SD\\DropMusic\\project\\src\\MulticastClient.java";
-            inputStream = new BufferedInputStream(new FileInputStream(path));
+            inputStream = new BufferedInputStream(file);
 
 
             byte[] buffer = new byte[1024 * 1024 * 10];
@@ -56,12 +51,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
             out.write(buffer,0,size);
             //recebe msg de success ou fail
             System.out.println(in.readUTF());
-            /*
-            //System.out.println(in.readUTF());
-            byte[] ar= new byte[Integer.parseInt(in.readUTF())];
-            in.read(ar);
-            Files.write(new File("C:\\Users\\User\\Desktop\\euzinho1.jpeg").toPath(), ar);
-            */
+
         } catch (UnknownHostException e) {
             System.out.println("Sock:" + e.getMessage());
         } catch (EOFException e) {
@@ -104,6 +94,8 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                 }
                 //recebe nome da musica
                 //String nome = in.readUTF();
+                //OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(nome));
+
                 OutputStream outputStream = new BufferedOutputStream(new FileOutputStream("C:\\Users\\User\\Desktop\\Kodaline1.mp3"));
                 outputStream.write(array);
                 outputStream.close();
@@ -130,6 +122,9 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
 
 
     public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
+        try{
+            Thread.sleep(5000);
+        }catch (InterruptedException d){}
         RMIInterfaceServer rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
         System.out.println("Client ready...");
         RMIClient c = new RMIClient();
@@ -152,7 +147,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             message = rmi.login((RMIInterfaceClient) c);
                             rmi.printMessage(message, (RMIInterfaceClient) c);
 
-                            if (message.get("login").equals("successful")) {//verificar se o regist foi bem sucedido
+                            if (message.get("type")!=null && message.get("login").equals("successful")) {//verificar se o regist foi bem sucedido
                                 //login sucessful
                                 ClientID = message.get("identifier");
                                 login = true;
@@ -169,16 +164,18 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
 
                     switch (keyboardScanner.nextLine()) {
                         case "help":
-                            System.out.println("         search music");
+                            System.out.println("          search music");
                             System.out.println("           show all");
-                            System.out.println("         show details");
-                            System.out.println("          write review");
+                            System.out.println("          show details");
+                            System.out.println("           write review");
                             System.out.println("            log out");
+                            System.out.println("            download");
+                            System.out.println("             upload");
                             System.out.println(" ---- Editor Permission ----");
-                            System.out.println("           insert");
-                            System.out.println("           remove");
-                            System.out.println("            edit");
-                            System.out.println("            promote");
+                            System.out.println("             insert");
+                            System.out.println("             remove");
+                            System.out.println("              edit");
+                            System.out.println("             promote");
 
                             break;
                         case "search music":
@@ -262,7 +259,13 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             message.put("idmusic", keyboardScanner.nextLine());
                             message = rmi.request(message);
                             System.out.println(message.get("port"));
-                            TCPConnectionUp(message.get("port"), ClientID);
+                            System.out.println("Insert the path to the file");
+                            try{
+                                FileInputStream file = new FileInputStream(keyboardScanner.nextLine());
+                                TCPConnectionUp(message.get("port"), ClientID,file);
+                            }catch (FileNotFoundException e){
+                                System.out.println("File not Found");
+                            }
 
                             break;
                         case "download":
@@ -302,23 +305,22 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                     }
                 }
             } catch (ConnectException e) {
-                try {
-                    rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
-                    System.out.println("Erro no servidor, recuperamos com sucesso pode continuar a sua sessão");
-                }catch (ConnectException i){
-                    System.out.println("Solving error on server...");
-                    Boolean status = true;
-                    while (status) {
+                //Quando o RMIServer vai abaixo
+                System.out.println("Solving error on RMIServer...");
+                Boolean status = true;
+                while (status) { //espera até que o RMIServer volte a estar online
+                    try {
+                        rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
+                        status = false;
+                        System.out.println("Error solved");
+                    } catch (Exception q) {
                         try {
-                            rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
-                            status = false;
-                        }catch (Exception q){
-                            try {
-                                Thread.sleep(1000);
-                            }catch (InterruptedException a){}
+                            Thread.sleep(1000);
+                        } catch (InterruptedException a) {
                         }
                     }
                 }
+
             }
         }
     }

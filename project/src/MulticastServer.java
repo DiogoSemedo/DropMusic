@@ -57,6 +57,15 @@ public class MulticastServer extends Thread {
                 if (message.get("default").equals("false")) {  //verificar se é um pacote de verificao de multicast ou um request
                     if (!allrequest.containsKey(message.get("requestID"))) { //verifica o pedido já foi feito alguma vez
                         replyM = db.process(message);
+
+
+                        //teste
+                        System.out.println("RESPOSTA " + message.get("requestID"));
+                        for (HashMap.Entry<String, String> entry : replyM.entrySet()) {
+                            System.out.println(entry.getKey() + " : " + entry.getValue());
+                        }
+                        System.out.println("FIM DE RESPOSTA\n");
+                        //teste
                         allrequest.put(message.get("requestID"), replyM);
                         if (message.get("MulticastPort").equals(String.valueOf(reply.getLocalPort()))) { //verifica se vai responder ou só processar
                             if (message.get("type").equals("get port") && (message.get("status").equals("upload") || message.get("status").equals("download"))) {
