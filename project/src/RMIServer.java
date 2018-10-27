@@ -97,6 +97,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
     public static ServerList servers;
     public CheckMulticast test;
     private static int requestID;
+
+    /**
+     * Construtor do RMIServer, inicia a classe ServerList que guarda todos os servidores de Multicast para o balanceamento de carga
+     * inicia também a classe CheckMulticast que cria uma thread recebe ack dos multicastServers online
+     * @throws RemoteException
+     */
     public RMIServer() throws RemoteException {
         super();
         servers = new ServerList();
@@ -104,6 +110,13 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         requestID=0;
     }
 
+    /**
+     * Método que controla as exceptions e processa os testes entre ServidorRMI primário e secundário
+     * @param args
+     * @throws RemoteException
+     * @throws MalformedURLException
+     * @throws InterruptedException
+     */
     public static void main(String[] args) throws RemoteException, MalformedURLException, InterruptedException {
         RMIInterfaceServer rmi = new RMIServer();
         connection = null;
@@ -200,24 +213,44 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
 
     }
 
-    //O server chama sobre o secundário
+    /**
+     * Método para o servidor primário testar o servidor secundário
+     * @return
+     */
     public boolean callPrimaryToSecondary(){
         return true;
     }
 
+    /**
+     * O servidor primário atualiza as referencias para os callback dos clientes que estão online
+     * @param refs
+     */
     public void updateReferences(HashMap<String,RMIInterfaceClient> refs){
         references = refs;
     }
 
+    /**
+     * O servidor primário atualiza as informações da lista de servidores multicast
+     * @param a
+     */
     public void updateServersInfo(ServerList a){
         servers = a;
     }
 
+    /**
+     * O servirdor primário atualiza o contador de request
+     * @param id
+     */
     public void updateRequestcounter(int id){
         requestID = id;
     }
 
-
+    /**
+     * Método para comunicação com o MulticastServer
+     * @param message request que será processado no MulticastServer
+     * @return resposta do MulticastServer
+     * @throws RemoteException
+     */
     public HashMap<String, String> request(HashMap<String, String> message) throws RemoteException {
         MulticastSocket receiver = null;
         MulticastSocket sender = null;
@@ -258,7 +291,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
                 byte[] bufferR = new byte[BUFFER_SIZE];
                 DatagramPacket packetR = new DatagramPacket(bufferR, bufferR.length);
                 try {
-                    receiver.setSoTimeout(10000);
+                    receiver.setSoTimeout(2000);
                     receiver.receive(packetR);
                     byteIn = new ByteArrayInputStream(packetR.getData());
                     in = new ObjectInputStream(byteIn);
@@ -293,7 +326,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         }
     }
 
-
+    /**
+     * Método que pede os inputs necessários para o registo segundo o protocolo
+     * @param client referência do callback para o cliente
+     * @return resposta do MulticastServer através do método request()
+     * @throws RemoteException
+     */
     public HashMap<String, String> regist(RMIInterfaceClient client) throws RemoteException {
         //exemplo --> type|regist;username|name;password|pass
         HashMap<String, String> message = new HashMap<>();
@@ -308,6 +346,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         return message;
     }
 
+    /**
+     * Método que pede os inputs necessários para o login segundo o protocolo, e pede as notificações
+     * @param client referência do callback para o cliente
+     * @return resposta do MulticastServer através do método request()
+     * @throws RemoteException
+     */
     public HashMap<String, String> login(RMIInterfaceClient client) throws RemoteException {
         HashMap<String, String> message = new HashMap<>();
         message.put("type", "login");
@@ -321,6 +365,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         return message;
     }
 
+    /**
+     * Método que usa o método request e processa as notificações para o cliente, estando online dá o callback estando offline guarda na base de dados para quando o cliente estiver online
+     * @param message HasHMap segundo o protocolo para dar promote
+     * @return resposta do MulticastServer através do método request()
+     * @throws RemoteException
+     */
     public HashMap<String, String> promote(HashMap<String, String> message) throws RemoteException {
         message = request(message);
         if (message.get("msg").equals("successful")) {
@@ -338,6 +388,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         return message;
     }
 
+    /**
+     * Método que delimita o tamanho da review
+     * @param client
+     * @return a review com menos de 300 caracteres
+     * @throws RemoteException
+     */
     public String review(RMIInterfaceClient client) throws RemoteException {
         client.print_on_client("Write your review:");
         String read;
@@ -347,11 +403,24 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         return read;
     }
 
+    /**
+     * Método para pedir um ID de um atributo ao utilizador
+     * @param client referência do callback para o cliente
+     * @param value atributo para o qual se pede o ID
+     * @return o ID
+     * @throws RemoteException
+     */
     public String selectId(RMIInterfaceClient client, String value) throws RemoteException {
         client.print_on_client("Select ID for " + value);
         return client.getInput();
     }
 
+    /**
+     * Método para escolher entre artist/album/music
+     * @param client referência do callback para o cliente
+     * @return artist/album/music
+     * @throws RemoteException
+     */
     public String select(RMIInterfaceClient client) throws RemoteException {
 
         while (true) {
@@ -371,6 +440,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         }
     }
 
+    /**
+     * Método para escolher o atributo de pesquisa de música (search music)
+     * @param client referência do callback para o cliente
+     * @return artist/album/genre
+     * @throws RemoteException
+     */
     public String selectMusic(RMIInterfaceClient client) throws RemoteException {
 
         while (true) {
@@ -390,6 +465,13 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         }
     }
 
+    /**
+     * Método que pede ao utilizador todos os dados para respeitar o protocolo na função de inserir
+     * @param message HashMap pré preenchido com alguns pares chave,valor essenciais
+     * @param client referência do callback para o cliente
+     * @return HashMap respeitando o protocolo
+     * @throws RemoteException
+     */
     public HashMap<String, String> insert(HashMap<String, String> message, RMIInterfaceClient client) throws RemoteException {
         message.put("type", "insert");
         String select = select(client);
@@ -429,6 +511,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
 
     }
 
+    /**
+     *  Método que pede ao utilizador o rate
+     * @param client referência do callback para o cliente
+     * @return rate
+     * @throws RemoteException
+     */
     public String rate(RMIInterfaceClient client) throws RemoteException {
 
         client.print_on_client("Rate between 0 - 10:");
@@ -436,12 +524,25 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
 
     }
 
+    /**
+     * Método que usa o callback para o cliente para dar print do pares chave,valor do HashMap
+     * @param message HashMap
+     * @param client referência do callback para o cliente
+     * @throws RemoteException
+     */
     public void printMessage(HashMap<String, String> message, RMIInterfaceClient client) throws RemoteException {
         for (HashMap.Entry<String, String> entry : message.entrySet()) {
             client.print_on_client(entry.getKey() + " : " + entry.getValue());
         }
     }
 
+    /**
+     * Método para facilitar os inputs ao utilizador
+     * @param client referência do callback para o cliente
+     * @param select atributo para o switch do método
+     * @return atributo
+     * @throws RemoteException
+     */
     public String selectKey(RMIInterfaceClient client, String select) throws RemoteException {
         switch (select) {
 
@@ -485,11 +586,24 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         return "Wrong Input";
     }
 
+    /**
+     * Método para pedir um novo valor ao utilizador
+     * @param client referência do callback para o cliente
+     * @return valor
+     * @throws RemoteException
+     */
     public String selectValue(RMIInterfaceClient client) throws RemoteException {
         client.print_on_client("Input the new value:");
         return client.getInput();
     }
     //put references
+
+    /**
+     * Método para adicionar uma referência ao HashMap de referências de callback para os clientes online
+     * @param ClientID chave para o HashMap
+     * @param client valor para o HashMap
+     * @throws RemoteException
+     */
     public void addRef(String ClientID, RMIInterfaceClient client) throws RemoteException {
         references.put(ClientID, (RMIInterfaceClient) client);
         try{
@@ -504,6 +618,12 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
         client.print_on_client(message.get("msg"));
     }
 
+    /**
+     * Método para processar as notificações
+     * @param select atributo
+     * @param id atributo
+     * @throws RemoteException
+     */
     public void sendNotification(String select, String id) throws RemoteException {
         //method para receber os id's aos quais tem de mandar notificaçoes
         HashMap<String, String> map = new HashMap<>();
@@ -525,7 +645,13 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             }
         }
     }
-    //
+
+    /**
+     * Método para retirar a referência do HashMap
+     * @param message HashMap pré preenchido
+     * @return resposta do MulticastServer através do método request()
+     * @throws RemoteException
+     */
     public HashMap<String, String> logOut(HashMap<String, String> message) throws RemoteException {
         references.remove(message.get("identifier"));
         try{

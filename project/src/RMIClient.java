@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.Socket;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.rmi.ConnectException;
@@ -14,27 +15,45 @@ import java.util.HashMap;
 import java.util.Scanner;
 
 public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient {
-
+    /**
+     * Construtor RMIClient
+     * @throws RemoteException
+     */
     public RMIClient() throws RemoteException {
         super();
     }
 
+    /**
+     * Método para o servidor poder usar o callback o dar print no cliente
+     * @param s
+     * @throws RemoteException
+     */
     public void print_on_client(String s) throws RemoteException {
         System.out.println(s);
     }
 
+    /**
+     * Método para o servidor poder usar o callback para receber input do cliente
+     * @return valor introduzido pelo utilizador
+     */
     public String getInput() {
         return new Scanner(System.in).nextLine();
     }
 
-
-    public static void TCPConnectionUp(String port,String id, FileInputStream file) {
+    /**
+     * Método para dar upload de um ficheiro para a base de dados através de TCP
+     * @param port porto da socket no MulticastServer
+     * @param id id da música que vamos dar upload
+     * @param file FileInputStream com o path do file que vai ser enviado
+     * @param ip endereço da máquina do servidor Multicast
+     */
+    public static void TCPConnectionUp(String port,String id, FileInputStream file, String ip) {
         Socket s = null;
         DataOutputStream out = null;
         DataInputStream in = null;
         InputStream inputStream = null;
         try {
-            s = new Socket("localhost", Integer.parseInt(port));
+            s = new Socket(ip, Integer.parseInt(port));
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
 
@@ -71,12 +90,21 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
 
         }
     }
-    public static void TCPConnectionDown(String port,String id) {
+
+    /**
+     * Método para fazer download de um ficheiro para a Diretoria de Downloads
+     * @param port porto da socket no MulticastServer
+     * @param id id da música que vamos dar download
+     * @param ip endereço da máquina do servidor Multicast
+     * @param nome nome da música
+     */
+    public static void TCPConnectionDown(String port,String id,String ip,String nome) {
         Socket s = null;
         DataOutputStream out = null;
         DataInputStream in = null;
         try {
-            s = new Socket("localhost", Integer.parseInt(port));
+            s = new Socket(ip, Integer.parseInt(port));
+            System.out.println(ip);
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
             //envia ClientID
@@ -93,10 +121,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                     offset+=count;
                 }
                 //recebe nome da musica
-                //String nome = in.readUTF();
-                //OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(nome));
-
-                OutputStream outputStream = new BufferedOutputStream(new FileOutputStream("C:\\Users\\User\\Desktop\\Kodaline1.mp3"));
+                OutputStream outputStream = new BufferedOutputStream(new FileOutputStream("C:\\Users\\User\\Downloads\\"+nome));
                 outputStream.write(array);
                 outputStream.close();
             }
@@ -120,12 +145,35 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         }
     }
 
-
+    /**
+     * Main do cliente, menu de inputs e construção de HashMaps seguind o protocolo
+     * @param args
+     * @throws MalformedURLException
+     * @throws RemoteException
+     * @throws NotBoundException
+     */
     public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException {
-        try{
-            Thread.sleep(5000);
-        }catch (InterruptedException d){}
-        RMIInterfaceServer rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
+        if (args.length != 1) {
+            System.out.println("Input invalid. Format:java RMIClient <RMIServerip>");
+            System.exit(-1);
+        }
+
+        int i=0;
+        RMIInterfaceServer rmi=null;
+        do {//tentar conectar ao rmiserver durante 30 segundos
+            try {
+                rmi = (RMIInterfaceServer) Naming.lookup("//"+args[0]+":1099/dropmusic");
+
+            } catch (ConnectException e) {
+                try{Thread.sleep(5000);}catch (InterruptedException n){}
+            }
+            i++;
+        }while(i<6 && rmi==null);
+        if(i==6){//dá exit do cliente se não se conseguiu conectar nos 30 segundos
+            System.out.println("Unable to connect to RMIServer");
+            return;
+        }
+
         System.out.println("Client ready...");
         RMIClient c = new RMIClient();
         boolean login = false;
@@ -161,7 +209,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                     }
 
                 } else if (login) {
-
+                    System.out.println("New comand:");
                     switch (keyboardScanner.nextLine()) {
                         case "help":
                             System.out.println("          search music");
@@ -254,15 +302,19 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             break;
                         case "upload":
                             message.put("type", "get port");
-                            System.out.println("Select ID of the music you want to upload");
                             message.put("status", "upload");
+                            System.out.println("Select ID of the music you want to upload");
                             message.put("idmusic", keyboardScanner.nextLine());
-                            message = rmi.request(message);
-                            System.out.println(message.get("port"));
-                            System.out.println("Insert the path to the file");
                             try{
-                                FileInputStream file = new FileInputStream(keyboardScanner.nextLine());
-                                TCPConnectionUp(message.get("port"), ClientID,file);
+                                System.out.println("Insert the path to the file");
+                                String ext = keyboardScanner.nextLine();
+                                String[] aux = ext.split("\\.");
+                                FileInputStream file = new FileInputStream(ext);
+                                ext = aux[aux.length-1];
+                                message.put("ext",ext);
+                                //só manda request se o file path for válido
+                                message = rmi.request(message);
+                                TCPConnectionUp(message.get("port"), ClientID,file,message.get("ip"));
                             }catch (FileNotFoundException e){
                                 System.out.println("File not Found");
                             }
@@ -274,8 +326,9 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             System.out.println("Select id of music you want to download");
                             message.put("idmusic", keyboardScanner.nextLine());
                             message = rmi.request(message);
-                            System.out.println(message.get("port"));
-                            TCPConnectionDown(message.get("port"), ClientID);
+                            if(message.containsKey("port") && message.containsKey("ip")) {
+                                TCPConnectionDown(message.get("port"), ClientID, message.get("ip"),message.get("title"));
+                            }
                             break;
 
                         case "share":
@@ -310,7 +363,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                 Boolean status = true;
                 while (status) { //espera até que o RMIServer volte a estar online
                     try {
-                        rmi = (RMIInterfaceServer) Naming.lookup("dropmusic");
+                        rmi = (RMIInterfaceServer) Naming.lookup("//"+args[0]+":1099/dropmusic");
                         status = false;
                         System.out.println("Error solved");
                     } catch (Exception q) {
