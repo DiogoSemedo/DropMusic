@@ -12,12 +12,10 @@ import java.util.Scanner;
 class Server{
     private String port;
     private boolean replied;
-    private int numberfails;
 
     public Server(String port, boolean replied) {
         this.port = port;
         this.replied = replied;
-        this.numberfails=0;
     }
 
     public String getPort() {
@@ -30,13 +28,6 @@ class Server{
 
     public void setReplied(boolean replied) {
         this.replied = replied;
-    }
-
-    public boolean fail(){
-        this.numberfails++;
-        if(this.numberfails<5)
-            return false;
-        return true;
     }
 }
 
@@ -73,6 +64,7 @@ class ServerList{
         for(int i=0;i<this.servers.size();i++){
             if(!this.servers.get(i).isReplied()){
                 port = this.servers.get(i).getPort();
+                this.servers.get(i).setReplied(true);
                 break;
             }
         }
@@ -81,6 +73,12 @@ class ServerList{
             port = balance();
         }
         return port;
+    }
+
+    public void printAll(){
+        for(int a = 0; a<servers.size(); a++){
+            System.out.println(servers.get(a).getPort()+ " : "+servers.get(a).isReplied());
+        }
     }
 
     public void reboot(){
@@ -96,7 +94,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
     private String MULTICAST_ADDRESS_3 = "224.0.224.2";
     private HashMap<String, RMIInterfaceClient> references = new HashMap<String, RMIInterfaceClient>();
     public static RMIInterfaceServer connection;
-    public static ServerList servers;
+    public ServerList servers;
     public CheckMulticast test;
     private int requestID;
     public RMIServer() throws RemoteException {
@@ -145,34 +143,48 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
                 //fica secundário--------------------------------------------------
                 System.out.println("sou secundário...");
                 try {//cria registro para o principal poder testar o secundário
-                    LocateRegistry.createRegistry(2000);
+                    try {
+                        LocateRegistry.createRegistry(2000);
+                    }catch (ExportException a){
+                        //só o primeiro secundário cria o registo
+                    }
+                    //quando fica secundário dá
                     Naming.rebind("//0.0.0.0:2000/servers",rmi);
                 } catch (Exception i){}
-                Thread.sleep(30000); //Secundario testa substituir o primario se o primario estiver em baixo
+                Thread.sleep(5000); //Secundario testa substituir o primario se o primario estiver em baixo
             }catch (ConnectException e){
                 //o principal vai abaixo e o sencundário assume ser principal apartir daqui
                 LocateRegistry.createRegistry(1099);
-                Naming.rebind("//0.0.0.0:2000/servers",rmi);
                 Naming.rebind("//0.0.0.0:1099/dropmusic", rmi);
                 System.out.println("O servidor principal foi abaixo, assumi o trabalho como principal");
+                try{Naming.unbind("//0.0.0.0:2000/servers");}
+                catch (NotBoundException a){}//ingore
+                catch (ConnectException a){}
                 //tratamento do secundario como principal para o secundario
                 while(true) {
                     Thread.sleep(5000);
                     try {
                         connection = (RMIInterfaceServer) Naming.lookup("//0.0.0.0:2000/servers");
+                        if(connection!= null){
+                            try{
+                                if (connection.callPrimaryToSecondary()){
+                                    System.out.println("Secundário ON");
+                                }
+                            }catch (Exception i){//só para ignorar
+                                System.out.println("Testar Secundário: fail (isn't running)");
+                            }
+                        }
+                        else{
+                            System.out.println("Testar Secundário: fail (isn't running)");
+                        }
                     } catch (NotBoundException i) {
-
-                    }catch (ConnectException i){
                         System.out.println("Testar Secundário: fail (isn't running)");
                     }
-                    if(connection!= null){
-                        try{
-                            if (connection.callPrimaryToSecondary()){
-                                System.out.println("Secundário ON");
-                            }
-                        }catch (Exception i){//só para ignorar
-                        }
+                    catch (ConnectException i){
+                        System.out.println("Testar Secundário: fail (isn't running)");
+
                     }
+
                 }
             }
         }
@@ -200,6 +212,7 @@ public class RMIServer extends UnicastRemoteObject implements RMIInterfaceServer
             InetAddress groupR = InetAddress.getByName(MULTICAST_ADDRESS_2);
             message.put("requestID", String.valueOf(requestID));
             message.put("default", "false");
+            servers.printAll();
             String serverID = servers.balance();
             message.put("MulticastPort", serverID);
             receiver.joinGroup(groupR);
