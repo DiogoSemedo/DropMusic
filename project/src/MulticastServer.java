@@ -84,9 +84,13 @@ public class MulticastServer extends Thread {
                         System.out.println("FIM DE RESPOSTA\n");
 
                         allrequest.put(message.get("requestID"), (HashMap<String,String>) replyM.clone());
-                        if(message.get("type").equals("get port") && message.get("status").equals("download") && replyM.get("iddb").equals(iddb)){
+                        if(message.get("type").equals("get port") && message.get("status").equals("download") && replyM.containsKey("iddb") && replyM.get("iddb").equals(iddb)){
                             message.put("MulticastPort", String.valueOf(reply.getLocalPort()));
                         }
+                        else if(message.get("type").equals("get port") && message.get("status").equals("download")){
+                            message.put("MulticastPort","-1");//só para não entrar no if debaixo
+                        }
+
                         if (message.get("MulticastPort").equals(String.valueOf(reply.getLocalPort()))) { //verifica se vai responder ou só processar
                             if (message.get("type").equals("get port")) {
                                 new TCP(replyM); //cria thread para ligação tcp

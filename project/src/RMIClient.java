@@ -54,6 +54,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         InputStream inputStream = null;
         try {
             s = new Socket(ip, Integer.parseInt(port));
+
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
 
@@ -104,6 +105,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
         DataInputStream in = null;
         try {
             s = new Socket(ip, Integer.parseInt(port));
+
             System.out.println(ip);
             in = new DataInputStream(s.getInputStream());
             out = new DataOutputStream(s.getOutputStream());
@@ -195,7 +197,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             message = rmi.login((RMIInterfaceClient) c);
                             rmi.printMessage(message, (RMIInterfaceClient) c);
 
-                            if (message.get("type")!=null && message.get("login").equals("successful")) {//verificar se o regist foi bem sucedido
+                            if (message.containsKey("type") && message.get("login").equals("successful")) {//verificar se o regist foi bem sucedido
                                 //login sucessful
                                 ClientID = message.get("identifier");
                                 login = true;
@@ -219,6 +221,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             System.out.println("            log out");
                             System.out.println("            download");
                             System.out.println("             upload");
+                            System.out.println("              share");
                             System.out.println(" ---- Editor Permission ----");
                             System.out.println("             insert");
                             System.out.println("             remove");
@@ -269,7 +272,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             break;
                         case "write review":
                             message.put("type", "write review");
-                            message.put("identifier", rmi.selectId((RMIInterfaceClient) c, message.get("select")));
+                            message.put("identifier", rmi.selectId((RMIInterfaceClient) c, "album"));
                             message.put("rate", rmi.rate((RMIInterfaceClient) c));
                             message.put("text", rmi.review((RMIInterfaceClient) c));
                             message = rmi.request(message);
@@ -326,7 +329,7 @@ public class RMIClient extends UnicastRemoteObject implements RMIInterfaceClient
                             System.out.println("Select id of music you want to download");
                             message.put("idmusic", keyboardScanner.nextLine());
                             message = rmi.request(message);
-                            if(message.containsKey("port") && message.containsKey("ip")) {
+                            if(message.containsKey("port")) {
                                 TCPConnectionDown(message.get("port"), ClientID, message.get("ip"),message.get("title"));
                             }
                             break;

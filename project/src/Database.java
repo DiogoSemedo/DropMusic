@@ -69,6 +69,7 @@ public class Database {
                         "(" +
                         "    id serial primary key," +
                         "    text character varying(300) not null," +
+                        "    rate double precision not null,"+
                         "idalbum serial constraint fk_idalbum_reviews references public.albums(id) on delete cascade" +
                         ")");
                 cs.executeUpdate("CREATE TABLE public.notifications" +
